@@ -63,7 +63,7 @@ async def lifespan(app: FastAPI):
 
     # === Config
     # Obtenemos la config del archivo .YAML
-    config = ConfigLoader(os.environ["RULES_YAML_CONFIG_PATH"])
+    config = ConfigLoader(os.environ["CONFIG_FILE_PATH"])
     # Guardamos la config en el state
     app.state.config = config
 
@@ -72,7 +72,7 @@ async def lifespan(app: FastAPI):
 
     app.state.rate_limiter = RateLimiter(app.state.redis_client, config.rules)
 
-    # Iniciar watcher para cambios en rules.yaml
+    # Iniciar watcher para cambios en config.yaml
     app.state.watcher = ConfigWatcher(config.config_path, config.reload)
     app.state.watcher.start()
 
@@ -109,26 +109,33 @@ async def proxy_request(request: Request, path: str):
         # Raise a HTTP 429 Too Many Requests
         raise HTTPException(status_code=429, detail="Too Many Requests (Rate limit exceeded)")
 
-    # Reenviar request al backend
-    async with httpx.AsyncClient() as client:
-        backend_url = f"{os.environ["MELI_API_URL"]}/{path}"
+    try:
+        async with httpx.AsyncClient() as client:
+            backend_url = f"{os.environ['MELI_API_URL']}/{path}"
 
-        print(f"Request a {backend_url}")
-        # Hacemos una request a la API de MeLi con toda la data necesaria
-        response = await client.request(
-            method=request.method,
-            url=backend_url,
-            headers=dict(request.headers),
-            params=dict(request.query_params),
-            content=await request.body(),
+            # Send request
+            response = await client.request(
+                method=request.method,
+                url=backend_url,
+                headers={
+                    # **dict(request.headers),
+                    "User-Agent": "(httpx/async, krappramiro.jpg@gmail.com)",
+                    "Accept": "application/json",
+                },
+                params=dict(request.query_params),
+                content=await request.body(),
+            )
+
+        # Una vez terminada la request de httpx, retornamos la response que nos dió la API de MeLi
+        return JSONResponse(
+            content=response.json(),
+            status_code=response.status_code,
+            headers=dict(response.headers),
         )
-        print(response.status_code)
-        print(response.text)
 
-    # Una vez terminada la request de httpx, retornamos la response que nos dió la API de MeLi
-
-    return JSONResponse(
-        content=response.json(),
-        status_code=response.status_code,
-        headers=dict(response.headers),
-    )
+    except Exception as e:
+        print("🚨 Backend Proxy Error:", e)
+        return JSONResponse(
+            content={"error": "Internal Proxy Error", "details": e},
+            status_code=500,
+        )

@@ -1,0 +1,16 @@
+rules:
+  - type: "ip"
+    value: "100.100.100.100"
+    limit: 1000
+    window: 60 # 60 segundos
+
+  - type: "path"
+    pattern: "items/*" # Wildcard para rutas como /items/MLA123
+    limit: 100
+    window: 10
+
+  - type: "ip_path"
+    ip: "100.100.100.102"
+    path: "categories/*"
+    limit: 10
+    window: 300

@@ -5,7 +5,7 @@ Este archivo implementa el Rate Limiter del proxy
 
 import redis
 
-from .rules import IPAndPathRule, IPRule, PathRule, Rule
+from .rules import IPPathRule, IPRule, PathRule, Rule
 
 
 class RateLimiter:
@@ -32,7 +32,7 @@ class RateLimiter:
             return f"limit:ip:{ip}"
         if isinstance(rule, PathRule):
             return f"limit:path:{path}"
-        if isinstance(rule, IPAndPathRule):
+        if isinstance(rule, IPPathRule):
             return f"limit:ip_path:{ip}:{path}"
         # Si todos los isinstance de antes fallaron,
         # significa que no es ninguna regla que _generate_key reconozca

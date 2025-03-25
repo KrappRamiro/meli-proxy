@@ -9,6 +9,8 @@ import yaml
 from watchdog.events import FileSystemEventHandler
 from watchdog.observers import Observer
 
+from .rules import parse_rules
+
 
 class ConfigLoader:
     """
@@ -34,11 +36,14 @@ class ConfigLoader:
         # Si no especificamos el encoding, pylint se queja :(
         with open(self.config_path, encoding="utf-8") as f:
 
-            loaded_rules = yaml.safe_load(f)["rules"]
+            loaded_rules = yaml.safe_load(f)
             print(f"REGLAS CARGADAS: {loaded_rules}")
-            print(f"RULES TYPE: {type(loaded_rules)}")
+            print(f"LOADED RULES TYPE: {type(loaded_rules)}")
             # TODO: Hacer que rules type sea mapeado a los tipos definidos en rules.py
-            return loaded_rules
+            parsed_rules = parse_rules(loaded_rules)
+            print(f"REGLAS PARSEADAS: {parsed_rules}")
+            print(f"PARSED RULES TYPE: {type(parsed_rules)}")
+            return parsed_rules
 
     def reload(self):
         """Recarga el archivo de config actualizando las reglas."""

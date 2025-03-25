@@ -4,7 +4,7 @@ Proxy de APIs con sistema de rate limiting escalable para MercadoLibre.
 
 ## Limites técnicos:
 
-- Solamente se puede cargar un archivo de configuración (`rules.yaml`) y este solamente puede tener el encoding UTF-8.
+- Solamente se puede cargar un archivo de configuración (`config.yaml`) y este solamente puede tener el encoding UTF-8.
 
 ## 🚀 Instalación
 
