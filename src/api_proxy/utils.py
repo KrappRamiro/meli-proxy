@@ -12,8 +12,10 @@ def matches_pattern(path: str, pattern: str) -> bool:
     """
     Checks if the given path matches the provided wildcard pattern.
 
-    The matching follows Unix shell-style wildcards.
-    For example, a pattern like "items/*" would match "items/MLA123".
+    This function uses Unix shell-style matching with fnmatch, but also treats
+    a pattern ending in "/*" as matching the exact prefix as well as any subpath.
+    For example:
+        - Pattern "items/*" will match both "items" and "items/MLA123".
 
     Args:
         path (str): The path string to test.
@@ -22,9 +24,16 @@ def matches_pattern(path: str, pattern: str) -> bool:
     Returns:
         bool: True if the path matches the pattern, False otherwise.
     """
-    # Optionally adjust the path if your patterns don't include a leading slash.
+    # Remove a leading slash for consistency, if present.
     if path.startswith("/"):
         path = path[1:]
+
+    # If the pattern ends with "/*", check if the path matches the prefix.
+    if pattern.endswith("/*"):
+        prefix = pattern[:-2]  # Remove "/*" from the end
+        if path == prefix:
+            return True
+
     return fnmatch.fnmatch(path, pattern)
 
 
