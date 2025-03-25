@@ -5,9 +5,13 @@ En este archivo, se definen todas las reglas que nuestro Rate Limiter va a tener
 TODO: No tener reglas que usen And (por ejemplo, IPPathRule), porque en el momento en el que queramos tener checkear 3 o 4 rules al mismo tiempo, va a ser un CAOS
 """
 
-from pydantic import BaseModel, Field, ValidationError
-from typing import Literal, Union, Dict, Any
 import logging
+from typing import Any, Literal
+
+from pydantic import BaseModel, Field, ValidationError
+
+# See https://stackoverflow.com/a/77007723/15965186
+logger = logging.getLogger("uvicorn.error")
 
 
 class RateRuleBase(BaseModel):

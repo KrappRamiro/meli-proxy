@@ -3,13 +3,20 @@ Ver https://stackoverflow.com/questions/32923451/how-to-run-an-function-when-any
 Y https://pythonhosted.org/watchdog/quickstart.html
 """
 
+import logging
 from pathlib import Path
+
+# Para ver para que importamos pformat, ver https://stackoverflow.com/a/11093247/15965186
+from pprint import pformat
 
 import yaml
 from watchdog.events import FileSystemEventHandler
 from watchdog.observers import Observer
 
 from .rules import parse_rules
+
+# See https://stackoverflow.com/a/77007723/15965186
+logger = logging.getLogger("uvicorn.error")
 
 
 class ConfigLoader:
@@ -34,21 +41,21 @@ class ConfigLoader:
             dict: Diccionario con las reglas de configuración.
         """
         # Si no especificamos el encoding, pylint se queja :(
+        logger.info("Cargando el archivo de config: %s", self.config_path)
         with open(self.config_path, encoding="utf-8") as f:
-
             loaded_rules = yaml.safe_load(f)
-            print(f"REGLAS CARGADAS: {loaded_rules}")
-            print(f"LOADED RULES TYPE: {type(loaded_rules)}")
-            # TODO: Hacer que rules type sea mapeado a los tipos definidos en rules.py
+            logger.info("REGLAS CARGADAS:\n%s", pformat(loaded_rules))
+
+            # Parseamos las reglas, para convertirlas de un diccionario, a una lista de Rules como las de rules.py
             parsed_rules = parse_rules(loaded_rules)
-            print(f"REGLAS PARSEADAS: {parsed_rules}")
-            print(f"PARSED RULES TYPE: {type(parsed_rules)}")
+            logger.info("REGLAS PARSEADAS:\n%s", pformat(parsed_rules))
+
             return parsed_rules
 
     def reload(self):
         """Recarga el archivo de config actualizando las reglas."""
         self.rules = self._load_config()
-        print(f"REGLAS RECARGADAS: {self.rules}")
+        logger.info("Se recargaron las reglas, ahora son:\n%s", pformat(self.rules))
 
 
 class ConfigWatcher:
@@ -77,12 +84,13 @@ class ConfigWatcher:
 
     def start(self):
         """Inicia la monitorización del archivo de config."""
-        # Monitoriza solo el directorio padre sin recursividad
+        # Si algun día se implementa para que mire un directorio en vez de un solo archivo, quizas convenga poner recursive=false
         self.observer.schedule(self.handler, path=str(Path(self.config_path).parent), recursive=False)
+        logging.info("Iniciando watcheo de %s", self.config_path)
         self.observer.start()
 
     def stop(self):
-        """Detiene la monitorización y libera recursos."""
+        """Detiene el watcheo y libera recursos."""
         self.observer.stop()
         self.observer.join()
 

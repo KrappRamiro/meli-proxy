@@ -1,3 +1,4 @@
+import logging
 import os
 from contextlib import asynccontextmanager
 
@@ -24,10 +25,9 @@ async def setup_redis_client():
     )
     try:
         await redis_client.ping()
-        # TODO: Change with logger implementation
-        print("Redis is connected")
+        logger.info("Redis is connected")
     except Exception as e:
-        # TODO Replace this generic exception class with a more specific one
+        logger.error("Redis is not connected: %s", e)
         raise Exception(f"Redis is not connected: {e}")
     return redis_client
 
@@ -91,7 +91,10 @@ async def lifespan(app: FastAPI):
 
 
 # Inicializamos nuestra instancia de FastAPI
-app = FastAPI(lifespan=lifespan)
+app = FastAPI(lifespan=lifespan, title="Meli Proxy")
+
+# See https://stackoverflow.com/a/77007723/15965186
+logger = logging.getLogger("uvicorn.error")
 
 
 @app.api_route("/{path:path}")
@@ -102,22 +105,24 @@ async def proxy_request(request: Request, path: str):
 
     # We need the client_ip to rate-limit later
     client_ip = request.client.host
+    target_url = f"{os.environ['MELI_API_URL']}/{path}"
 
     # Verificar rate limiting usando app.state,
     # explicación de app.state en https://stackoverflow.com/a/71298949/15965186
-    if not await request.app.state.rate_limiter.is_allowed(client_ip, request.url.path):
+    if not await request.app.state.rate_limiter.is_allowed(client_ip, path):
         # Raise a HTTP 429 Too Many Requests
+        logger.warning("The request to %s , with clent ip %s , has rate-limited", target_url, client_ip)
         raise HTTPException(status_code=429, detail="Too Many Requests (Rate limit exceeded)")
 
     try:
         async with httpx.AsyncClient() as client:
-            backend_url = f"{os.environ['MELI_API_URL']}/{path}"
 
             # Send request
             response = await client.request(
                 method=request.method,
-                url=backend_url,
+                url=target_url,
                 headers={
+                    # TODO: lograr overridear request.headers
                     # **dict(request.headers),
                     "User-Agent": "(httpx/async, krappramiro.jpg@gmail.com)",
                     "Accept": "application/json",

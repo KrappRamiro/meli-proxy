@@ -3,9 +3,14 @@ rate_limiter.py
 Este archivo implementa el Rate Limiter del proxy
 """
 
+import logging
+
 import redis
 
 from .rules import IPPathRule, IPRule, PathRule, Rule
+
+# See https://stackoverflow.com/a/77007723/15965186
+logger = logging.getLogger("uvicorn.error")
 
 
 class RateLimiter:
@@ -28,15 +33,29 @@ class RateLimiter:
 
         TODO: hacer un diagrama con Mermaid del flujo de cómo funciona todo esto
         """
+        if not isinstance(rule, Rule):
+            # significa que no es ninguna regla que _generate_key reconozca
+            logger.error(
+                "En el RateLimiter, en _generate_key , se obtuvo una variable rule con el tipo %s, pero este tipo no es una instancia de Rule",
+                type(rule),
+            )
+            raise ValueError(f"El tipo no es una instancia de Rule: {type(rule)}")
+
         if isinstance(rule, IPRule):
-            return f"limit:ip:{ip}"
-        if isinstance(rule, PathRule):
-            return f"limit:path:{path}"
-        if isinstance(rule, IPPathRule):
-            return f"limit:ip_path:{ip}:{path}"
-        # Si todos los isinstance de antes fallaron,
-        # significa que no es ninguna regla que _generate_key reconozca
-        raise ValueError(f"Tipo de regla no soportado: {type(rule)}")
+            key = f"limit:ip:{ip}"
+        elif isinstance(rule, PathRule):
+            key = f"limit:path:{path}"
+        elif isinstance(rule, IPPathRule):
+            key = f"limit:ip_path:{ip}:{path}"
+        else:
+            # significa que no es ninguna regla que _generate_key reconozca
+            logger.error(
+                "En el RateLimiter, _generate_key obtuvo una rule con tipo %s, pero esta Rule no es soportada", type(rule)
+            )
+            raise ValueError(f"Tipo de regla no soportado: {type(rule)}")
+
+        logger.info("Generada la key: %s", key)
+        return key
 
     async def is_allowed(self, ip: str, path: str) -> bool:
         """
@@ -50,20 +69,24 @@ class RateLimiter:
         """
         for rule in self.rules:
             # Genera un string con la key a usar en redis
-            print(f"La regla es {rule}")
+            logger.info("Checkeando si la key %s está rate-limiteada", rule)
+            logger.info("Esta key tiene un límite de %s", rule.limit)
             key = self._generate_key(rule, ip, path)
 
             # requests_amount va a comenzar a tener la cantidad de peticiones que se hicieron teniendo en cuenta la IP y el Path
             # Si la key no existe en Redis, la inicializa con valor 1
             # Si en cambio si existe, incrementa el valor de la key
             requests_amount = await self.redis.incr(key)
+            logger.info("La key tenía %s peticiones", requests_amount)
 
             # Esto solamente pasa cuando la key es nueva
             if requests_amount == 1:
+                logger.info("Esto significa que esa key la acabamos de crear!")
                 # Le da un tiempo de expiración (TTL) a la key
                 await self.redis.expire(key, rule.window)
                 return True
 
             # Si la cantidad de requests superaron al límite permitido, retorna Falso, lo cual significa que esa request fue rate-limiteada!
             if requests_amount > rule.limit:
+                logger.info("Esto significa que la key debe ser rate-limiteada")
                 return False
