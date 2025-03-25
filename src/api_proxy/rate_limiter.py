@@ -5,7 +5,7 @@ Implementa el mecanismo de rate limiting usando Redis como backend.
 import logging
 from pprint import pformat
 
-import redis
+import redis.asyncio
 
 from .rules import Rule
 
@@ -21,7 +21,7 @@ class RateLimiter:
         rules (List[Rule]): Reglas activas para evaluación
     """
 
-    def __init__(self, redis_client: redis.Redis, rules: list[Rule]):
+    def __init__(self, redis_client: redis.asyncio.Redis, rules: list[Rule]):
         """
         Inicializa el rate limiter.
 

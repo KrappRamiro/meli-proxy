@@ -2,7 +2,7 @@ import fnmatch
 import logging
 import os
 
-from redis.asyncio import Redis
+import redis.asyncio
 
 # See https://stackoverflow.com/a/77007723/15965186
 logger = logging.getLogger("uvicorn.error")
@@ -37,11 +37,11 @@ def matches_pattern(path: str, pattern: str) -> bool:
     return fnmatch.fnmatch(path, pattern)
 
 
-async def setup_redis_client():
+async def setup_redis_client() -> redis.asyncio.Redis:
     """
     Based on https://www.reddit.com/r/FastAPI/comments/1e67aug/how_to_use_redis/
     """
-    redis_client = Redis(
+    redis_client = redis.asyncio.Redis(
         host=os.environ["REDIS_HOST"],
         port=os.environ["REDIS_PORT"],
         password=os.environ["REDIS_PASSWORD"],

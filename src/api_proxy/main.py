@@ -1,15 +1,16 @@
 import logging
 import os
 from contextlib import asynccontextmanager
+from typing import Any
 
 import httpx
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.responses import JSONResponse
 
-from .utils import setup_redis_client
-
 from .config_loader import ConfigLoader, ConfigWatcher
 from .rate_limiter import RateLimiter
+from .rules import parse_rules
+from .utils import setup_redis_client
 
 # TODO: Reemplazar carga de variables de entorno por https://evarify.readthedocs.io/
 
@@ -51,7 +52,6 @@ async def lifespan(app: FastAPI):
 
     # === Rate Limiter
     # Guardamos la configuración del rate limiter en base a las reglas de configuración
-
     app.state.rate_limiter = RateLimiter(app.state.redis_client, config.rules)
 
     # Iniciar watcher para cambios en config.yaml
@@ -79,13 +79,19 @@ app = FastAPI(lifespan=lifespan, title="Meli Proxy")
 logger = logging.getLogger("uvicorn.error")
 
 
+# Acá devolvemos Any, porque no sabemos que puede llegar a devolver la API de MeLi
 @app.api_route("/{path:path}")
-async def proxy_request(request: Request, path: str):
+async def proxy_request(request: Request, path: str) -> Any:
     """
     Proxy the request to the MercadoLibre API
     """
 
     # We need the client_ip to rate-limit later
+    if request.client is None:
+        raise HTTPException(
+            detail="For some reason, request.client was None",
+            status_code=400,
+        )
     client_ip = request.client.host
     target_url = f"{os.environ['MELI_API_URL']}/{path}"
 
@@ -99,7 +105,6 @@ async def proxy_request(request: Request, path: str):
 
     try:
         async with httpx.AsyncClient() as client:
-
             # Send request
             response = await client.request(
                 method=request.method,
@@ -122,8 +127,9 @@ async def proxy_request(request: Request, path: str):
         )
 
     except Exception as e:
-        print("🚨 Backend Proxy Error:", e)
-        return JSONResponse(
-            content={"error": "Internal Proxy Error", "details": e},
+        logger.error("🚨 Backend Proxy Error: %s", e)
+        # Use `from e` to comply with https://pylint.readthedocs.io/en/latest/user_guide/messages/warning/raise-missing-from.html
+        raise HTTPException(
+            detail=f"Internal Proxy Error: {e}",
             status_code=500,
-        )
+        ) from e

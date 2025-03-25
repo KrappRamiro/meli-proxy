@@ -13,7 +13,7 @@ import yaml
 from watchdog.events import FileSystemEventHandler
 from watchdog.observers import Observer
 
-from .rules import parse_rules
+from .rules import Rule, parse_rules
 
 # See https://stackoverflow.com/a/77007723/15965186
 logger = logging.getLogger("uvicorn.error")
@@ -33,7 +33,7 @@ class ConfigLoader:
         self.config_path = config_path
         self.rules = self._load_config()
 
-    def _load_config(self) -> dict:
+    def _load_config(self) -> list[Rule]:
         """
         Carga el archivo YAML y extrae la sección de reglas.
 
@@ -52,7 +52,7 @@ class ConfigLoader:
 
             return parsed_rules
 
-    def reload(self):
+    def reload(self) -> None:
         """Recarga el archivo de config actualizando las reglas."""
         self.rules = self._load_config()
         logger.info("Se recargaron las reglas, ahora son:\n%s", pformat(self.rules))
@@ -82,14 +82,14 @@ class ConfigWatcher:
         self.config_path = config_path
         self.handler = FileUpdateHandler(config_path, callback)
 
-    def start(self):
+    def start(self) -> None:
         """Inicia la monitorización del archivo de config."""
         # Si algun día se implementa para que mire un directorio en vez de un solo archivo, quizas convenga poner recursive=false
         self.observer.schedule(self.handler, path=str(Path(self.config_path).parent), recursive=False)
         logging.info("Iniciando watcheo de %s", self.config_path)
         self.observer.start()
 
-    def stop(self):
+    def stop(self) -> None:
         """Detiene el watcheo y libera recursos."""
         self.observer.stop()
         self.observer.join()
