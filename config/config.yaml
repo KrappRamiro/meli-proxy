@@ -10,7 +10,7 @@ rules:
     window: 60 # 60 segundos
 
   - type: "path"
-    pattern: "user"
+    pattern: "user/*"
     limit: 5
     window: 60 # 60 segundos
 
