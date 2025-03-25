@@ -44,11 +44,11 @@ class ConfigLoader:
         logger.info("Cargando el archivo de config: %s", self.config_path)
         with open(self.config_path, encoding="utf-8") as f:
             loaded_rules = yaml.safe_load(f)
-            logger.info("REGLAS CARGADAS:\n%s", pformat(loaded_rules))
+            logger.debug("REGLAS CARGADAS:\n%s", pformat(loaded_rules))
 
             # Parseamos las reglas, para convertirlas de un diccionario, a una lista de Rules como las de rules.py
             parsed_rules = parse_rules(loaded_rules)
-            logger.info("REGLAS PARSEADAS:\n%s", pformat(parsed_rules))
+            logger.debug("REGLAS PARSEADAS:\n%s", pformat(parsed_rules))
 
             return parsed_rules
 

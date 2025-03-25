@@ -23,19 +23,48 @@ class RateRuleBase(BaseModel):
 
 
 class IPRule(RateRuleBase):
+    """
+    A rate limiting rule based on an IP address.
+
+    Attributes:
+        type (Literal["ip"]): A fixed value indicating this rule is IP-based.
+        ip (str): The IP address to which the rule applies.
+            The value must match the regex pattern "^\d{1,3}(\.\d{1,3}){3}$" ensuring it is in valid IPv4 format.
+    """
+
     type: Literal["ip"] = "ip"
-    value: str = Field(..., pattern=r"^\d{1,3}(\.\d{1,3}){3}$")
+    ip: str = Field(..., pattern=r"^\d{1,3}(\.\d{1,3}){3}$")
 
 
 class PathRule(RateRuleBase):
+    """
+    A rate limiting rule based on URL path matching.
+
+    Attributes:
+        type (Literal["path"]): A fixed value indicating this rule is path-based.
+        pattern (str): A string representing the URL path pattern.
+            The string must have a minimum length of 1, ensuring it is not empty.
+    """
+
     type: Literal["path"] = "path"
     pattern: str = Field(..., min_length=1)
 
 
 class IPPathRule(RateRuleBase):
+    """
+    A combined rate limiting rule based on both IP address and URL path.
+
+    Attributes:
+        type (Literal["ip_path"]): A fixed value indicating this rule combines IP and path criteria.
+        ip (str): The IP address component of the rule.
+            The value must match the regex pattern "^\d{1,3}(\.\d{1,3}){3}$" ensuring it is a valid IPv4 address.
+        pattern (str): The URL path pattern component of the rule.
+            The pattern must have a minimum length of 1 to ensure it is not empty.
+    """  # noqa: W605
+
     type: Literal["ip_path"] = "ip_path"
     ip: str = Field(..., pattern=r"^\d{1,3}(\.\d{1,3}){3}$")
-    path: str = Field(..., min_length=1)
+    pattern: str = Field(..., min_length=1)
 
 
 # Unimos todos los tipos de reglas posibles

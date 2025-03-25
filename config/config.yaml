@@ -1,7 +1,17 @@
 rules:
   - type: "ip"
-    value: "100.100.100.100"
+    ip: "100.100.100.100"
     limit: 1000
+    window: 60 # 60 segundos
+
+  - type: "ip"
+    ip: "127.0.0.1"
+    limit: 15
+    window: 60 # 60 segundos
+
+  - type: "path"
+    pattern: "user"
+    limit: 5
     window: 60 # 60 segundos
 
   - type: "path"
@@ -11,6 +21,6 @@ rules:
 
   - type: "ip_path"
     ip: "100.100.100.102"
-    path: "categories/*"
+    pattern: "categories/*"
     limit: 10
     window: 300

@@ -4,8 +4,11 @@ Este archivo implementa el Rate Limiter del proxy
 """
 
 import logging
+from pprint import pformat
 
 import redis
+
+from .utils import matches_pattern
 
 from .rules import IPPathRule, IPRule, PathRule, Rule
 
@@ -42,11 +45,11 @@ class RateLimiter:
             raise ValueError(f"El tipo no es una instancia de Rule: {type(rule)}")
 
         if isinstance(rule, IPRule):
-            key = f"limit:ip:{ip}"
+            key = f"limit:by_ip:{ip}"
         elif isinstance(rule, PathRule):
-            key = f"limit:path:{path}"
+            key = f"limit:by_path:{path}"
         elif isinstance(rule, IPPathRule):
-            key = f"limit:ip_path:{ip}:{path}"
+            key = f"limit:by_ip_path:{ip}:{path}"
         else:
             # significa que no es ninguna regla que _generate_key reconozca
             logger.error(
@@ -67,26 +70,61 @@ class RateLimiter:
 
         TODO: cambiar para que no pida solamente IP y PATH, sino que pida una lista (o diccionario) de elementos a validar. Para eso, hay que cambiar tambien _generate_key
         """
+
+        logger.debug("INICIA IS ALLOWED")
+        logger.debug("Our rules are: %s", pformat(self.rules))
         for rule in self.rules:
             # Genera un string con la key a usar en redis
-            logger.info("Checkeando si la key %s está rate-limiteada", rule)
-            logger.info("Esta key tiene un límite de %s", rule.limit)
+
+            logger.debug("Checkeando la rule %s", rule)
+
+            # ================ #
+            # MATCHEO DE LA RULE
+
+            if isinstance(rule, IPRule):
+                logger.debug("Es instancia de IPRule!")
+                if ip == rule.ip:
+                    logger.debug("Match con IP!")
+                else:
+                    logger.debug("No matcheo!")
+                    continue
+            elif isinstance(rule, PathRule):
+                logger.debug("Es instancia de PathRule!")
+                if matches_pattern(path, rule.pattern):
+                    logger.debug("Match con PATH!")
+                else:
+                    logger.debug("No matcheo!")
+                    continue
+            elif isinstance(rule, IPPathRule):
+                logger.debug("Es instancia de IPPathRule!")
+                if ip == rule.ip and matches_pattern(path, rule.pattern):
+                    logger.debug("Match con PATH e IP!")
+                else:
+                    logger.debug("No matcheo!")
+                    continue
+            else:
+                logger.debug("No matcheo ninguna instancia con la regla %s, siguiente regla!", rule)
+                continue
+
+            # ================ #
+
+            logger.debug("Esta rule tiene un límite de %s", rule.limit)
             key = self._generate_key(rule, ip, path)
 
             # requests_amount va a comenzar a tener la cantidad de peticiones que se hicieron teniendo en cuenta la IP y el Path
             # Si la key no existe en Redis, la inicializa con valor 1
             # Si en cambio si existe, incrementa el valor de la key
             requests_amount = await self.redis.incr(key)
-            logger.info("La key tenía %s peticiones", requests_amount)
+            logger.debug("La key tenía %s peticiones", requests_amount)
 
             # Esto solamente pasa cuando la key es nueva
             if requests_amount == 1:
-                logger.info("Esto significa que esa key la acabamos de crear!")
+                logger.debug("Esto significa que esa key la acabamos de crear!")
                 # Le da un tiempo de expiración (TTL) a la key
                 await self.redis.expire(key, rule.window)
-                return True
 
             # Si la cantidad de requests superaron al límite permitido, retorna Falso, lo cual significa que esa request fue rate-limiteada!
             if requests_amount > rule.limit:
-                logger.info("Esto significa que la key debe ser rate-limiteada")
+                logger.debug("Esto significa que la key debe ser rate-limiteada")
                 return False
+        return True

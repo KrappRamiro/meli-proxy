@@ -5,31 +5,13 @@ from contextlib import asynccontextmanager
 import httpx
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.responses import JSONResponse
-from redis.asyncio import Redis
+
+from .utils import setup_redis_client
 
 from .config_loader import ConfigLoader, ConfigWatcher
 from .rate_limiter import RateLimiter
 
 # TODO: Reemplazar carga de variables de entorno por https://evarify.readthedocs.io/
-
-
-async def setup_redis_client():
-    """
-    Based on https://www.reddit.com/r/FastAPI/comments/1e67aug/how_to_use_redis/
-    """
-    redis_client = Redis(
-        host=os.environ["REDIS_HOST"],
-        port=os.environ["REDIS_PORT"],
-        password=os.environ["REDIS_PASSWORD"],
-        decode_responses=True,
-    )
-    try:
-        await redis_client.ping()
-        logger.info("Redis is connected")
-    except Exception as e:
-        logger.error("Redis is not connected: %s", e)
-        raise Exception(f"Redis is not connected: {e}")
-    return redis_client
 
 
 @asynccontextmanager
@@ -109,9 +91,10 @@ async def proxy_request(request: Request, path: str):
 
     # Verificar rate limiting usando app.state,
     # explicación de app.state en https://stackoverflow.com/a/71298949/15965186
+    logger.info("Handling a request to %s , with client IP %s", target_url, client_ip)
     if not await request.app.state.rate_limiter.is_allowed(client_ip, path):
         # Raise a HTTP 429 Too Many Requests
-        logger.warning("The request to %s , with clent ip %s , has rate-limited", target_url, client_ip)
+        logger.warning("The request to %s , with client IP %s , has rate-limited", target_url, client_ip)
         raise HTTPException(status_code=429, detail="Too Many Requests (Rate limit exceeded)")
 
     try:
