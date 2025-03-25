@@ -1,0 +1,111 @@
+# pyproject.toml
+# To understand what it is, See https://stackoverflow.com/questions/62983756/what-is-pyproject-toml-file-for
+# To understand the configuration, See https://packaging.python.org/en/latest/guides/writing-pyproject-toml/
+# --------------------------------------------
+# Build System
+# The [build-system] table is strongly recommended.
+# It allows you to declare which build backend you use and which other dependencies are needed to build your project.
+# The [build-system] table should always be present, regardless of which build backend you use ([build-system] defines the build tool you use).
+# --------------------------------------------
+[build-system]
+requires = ["setuptools>=77.0.3", "wheel"]
+build-backend = "setuptools.build_meta"
+
+# --------------------------------------------
+# Project Metadata
+# The [project] table is the format that most build backends use to specify your project’s basic metadata, such as the dependencies, your name, etc.
+# the [project] table is understood by most build backends, but some build backends use a different format. See https://packaging.python.org/en/latest/guides/writing-pyproject-toml/ for more info
+# --------------------------------------------
+[project]
+name = "api_proxy"  # Nombre del paquete (debe coincidir con la carpeta de src/)
+version = "1.0.0"
+description = "Proxy de APIs para challenge técnico de Mercado Libre"
+authors = [{ name = "Ramiro Krapp", email = "krappramiro.jpg@gmail.com" }]
+readme = "README.md"
+requires-python = ">=3.12"
+license = { text = "MIT" }
+
+# Dependencias del proyecto (equivalente a requirements.txt)
+dependencies = [
+    # Framework para construir la API (FastAPI)
+    "fastapi>=0.115.0",
+    # Servidor ASGI (Asynchronous Server Gateway Interface) (sucesor de WSGI, pero asíncrono) para ejecutar FastAPI (incluye WebSockets y HTTP/2)
+    "uvicorn[standard]>=0.34.0",
+    # Cliente Redis para almacenar contadores de rate limiting
+    "redis>=5.2.1",
+    # Cliente HTTP asíncrono para hacer requests al backend de MercadoLibre
+    "httpx>=0.28.0",
+    # Manejo de variables de entorno desde archivos .env
+    "python-dotenv>=1.0.0",
+    # Recarga automática de configuración al modificar YAML
+    "watchdog>=6.0.0",
+
+    # Los tipos para PyYAML
+    "types-PyYAML >=6.0.12"
+]
+
+# Dependencias opcionales
+[project.optional-dependencies]
+# Dependencias para desarrollo local
+dev = [
+    # Formateador automático de código
+    "black>=25.0.0",
+
+    # Linter (reemplaza a flake8 + isort)
+    "ruff>=0.11.0",
+
+    # Type checking estático
+    "mypy>=1.15.0",
+]
+# Dependencia para correr tests
+test = [
+    # Framework de testing
+    "pytest>=8.3.0",
+
+    # Cliente HTTP para tests
+    "httpx>=0.28.0",
+
+    # Medir coverage
+    "coverage>=7.7.0"
+]
+
+# --------------------------------------------
+# Tools
+# The [tool] table has tool-specific subtables, e.g., [tool.hatch], [tool.black], [tool.mypy].
+# We only touch upon this table here because its contents are defined by each tool.
+# Consult the particular tool’s documentation to know what it can contain.
+# --------------------------------------------
+
+# Autoformatter (https://black.readthedocs.io)
+[tool.black]
+line-length = 130
+# No es necesario especificar target_version, ya que según
+# https://black.readthedocs.io/en/stable/usage_and_configuration/the_basics.html#t-target-version
+# > By default, Black will infer target versions from the project metadata in pyproject.toml, specifically the [project.requires-python] field.
+# > If this does not yield conclusive results, Black will use per-file auto-detection.
+include = '\.pyi?$' # Archivos a formatear, formatea todo lo que termine en .py o .pyi (archivos stub para type hints, ver https://stackoverflow.com/questions/41734836/what-does-i-represent-in-python-pyi-extension)
+
+# Linter (https://beta.ruff.rs/docs/)
+# Based in https://github.com/pylint-dev/pylint/blob/main/pyproject.toml
+[tool.ruff]
+
+# Remember that, as a warning says:
+# > The top-level linter settings are deprecated in favour of their counterparts in the `lint` section.
+# So instead of select, we use lint.select
+
+lint.select = [
+  "E",   # pycodestyle
+  "F",   # pyflakes
+  "I",   # isort
+  "RUF", # ruff
+  "UP",  # pyupgrade
+  "W",   # pycodestyle
+]
+
+lint.ignore = ["E501"]  # Ignorar error line-too-long (controlado por Black Formatter)
+
+# Type checking estático (https://mypy.readthedocs.io)
+[tool.mypy]
+strict = true                  # Habilita todas las comprobaciones
+disallow_untyped_defs = true   # Requiere type hints en todas las funciones
+python_version = "3.12"

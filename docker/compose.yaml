@@ -1,0 +1,15 @@
+name: ${COMPOSE_PROJECT_NAME:-meli-proxy}
+services:
+  # ===================
+  # redis
+  # -------------------
+  redis:
+    image: redis:alpine
+    restart: always
+    healthcheck:
+      test: ["CMD-SHELL", "redis-cli ping | grep PONG"]
+      interval: 1s
+      timeout: 10s
+      retries: 20
+    ports:
+      - ${REDIS___EXTERNAL_PORT:-6379}:${REDIS___INTERNAL_PORT:-6379}

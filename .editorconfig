@@ -1,0 +1,33 @@
+# EditorConfig is awesome: https://EditorConfig.org
+
+# top-most EditorConfig file
+root = true
+
+[*]
+indent_style = space # Usamos espacios para indentar
+indent_size = 4 # 4 espacios de indentación
+# Caveat: Prettier won’t trim trailing whitespace inside template strings, but your editor might.
+trim_trailing_whitespace = true # Elimina espacios en blanco al final de las líneas
+# Why set this to true? To be POSIX compliant, See https://stackoverflow.com/questions/729692/why-should-text-files-end-with-a-newline
+insert_final_newline = true # Asegura que los archivos terminen con una línea en blanco
+end_of_line = lf # use lf for line endings, instead of CRLF
+charset = utf-8 # Codificación de caracteres UTF-8
+
+# # Configuración específica para archivos JavaScript, TypeScript, JSX, HTML, CSS y JSON
+[*.{js,ts,tsx,jsx,html,css,json}]
+indent_size = 2
+
+[*.{py}]
+# Python project HAVE TO use 4 spaces as identation
+indent_style = space
+indent_size = 4
+
+#! The suggested syntax for YAML files is to use 2 spaces for indentation,
+#! and its suggested to not use tabs for portability reasons
+#! See https://yaml.org/spec/1.2/spec.html#id2777534
+#! And also see https://helm.sh/docs/chart_best_practices/conventions/#formatting-yaml
+#! And see too https://helm.sh/docs/chart_best_practices/templates/#formatting-templates
+# Also md because we dont want yaml files to be incorrectly formatted in the READMES
+[*.{yml,yaml,md}]
+indent_style = space
+indent_size = 2
