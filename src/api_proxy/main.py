@@ -4,8 +4,9 @@ from contextlib import asynccontextmanager
 from typing import Any
 
 import httpx
-from fastapi import FastAPI, HTTPException, Request, Response
+from fastapi import FastAPI, HTTPException, Request, Response, status
 from prometheus_fastapi_instrumentator import Instrumentator
+from pydantic import BaseModel
 
 from .config_loader import ConfigLoader, ConfigWatcher
 from .rate_limiter import RateLimiter
@@ -152,3 +153,36 @@ async def proxy_request(request: Request, path: str) -> Any:
         logger.exception("Internal server error")
         # Use `from e` to comply with https://pylint.readthedocs.io/en/latest/user_guide/messages/warning/raise-missing-from.html
         raise HTTPException(status_code=500, detail="Internal Server Error") from e
+
+
+# ================= #
+# === Healthcheck ===
+# See https://gist.github.com/Jarmos-san/0b655a3f75b698833188922b714562e5
+# ----------------- #
+
+
+class HealthCheck(BaseModel):
+    """Response model to validate and return when performing a health check."""
+
+    status: str = "OK"
+
+
+@app.get(
+    "/health",
+    tags=["healthcheck"],
+    summary="Perform a Health Check",
+    response_description="Return HTTP Status Code 200 (OK)",
+    status_code=status.HTTP_200_OK,
+    response_model=HealthCheck,
+)
+def get_health() -> HealthCheck:
+    """
+    ## Perform a Health Check
+    Endpoint to perform a healthcheck on. This endpoint can primarily be used Docker
+    to ensure a robust container orchestration and management is in place. Other
+    services which rely on proper functioning of the API service will not deploy if this
+    endpoint returns any other HTTP status code except 200 (OK).
+    Returns:
+        HealthCheck: Returns a JSON response with the health status
+    """
+    return HealthCheck(status="OK")
