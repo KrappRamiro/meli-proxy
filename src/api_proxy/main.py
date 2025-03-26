@@ -5,7 +5,7 @@ from typing import Any
 
 import httpx
 from fastapi import FastAPI, HTTPException, Request, Response
-from fastapi.responses import JSONResponse
+from prometheus_fastapi_instrumentator import Instrumentator
 
 from .config_loader import ConfigLoader, ConfigWatcher
 from .rate_limiter import RateLimiter
@@ -57,6 +57,10 @@ async def lifespan(app: FastAPI):
     app.state.watcher = ConfigWatcher(config.config_path, config.reload)
     app.state.watcher.start()
 
+    # === Integración con Prometheus
+    # See https://github.com/trallnag/prometheus-fastapi-instrumentator?tab=readme-ov-file#exposing-endpoint
+    instrumentator.expose(app, include_in_schema=True)
+
     # === Lógica de startup termina acá === #
     # ===================================== #
 
@@ -77,9 +81,13 @@ app = FastAPI(lifespan=lifespan, title="Meli Proxy")
 # See https://stackoverflow.com/a/77007723/15965186
 logger = logging.getLogger("uvicorn.error")
 
+# Integración con Prometheus
+# see https://github.com/trallnag/prometheus-fastapi-instrumentator
+instrumentator = Instrumentator().instrument(app)
 
+
+@app.api_route("/proxy/{path:path}")
 # Acá devolvemos Any, porque no sabemos que puede llegar a devolver la API de MeLi
-@app.api_route("/{path:path}")
 # Para más info sobre Request, ver https://fastapi.tiangolo.com/advanced/using-request-directly/#using-the-request-directly
 async def proxy_request(request: Request, path: str) -> Any:
     """

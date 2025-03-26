@@ -94,6 +94,12 @@ Esto permite dos cosas: la primera es tener namespaces organizados, y la segunda
 
 Si algún día se quiere convertir el proyecto en una librería, ya está todo preparado.
 
+## Integración con Prometheus
+
+Se expone en el endpoint `metrics/`
+
+Ver https://github.com/trallnag/prometheus-fastapi-instrumentator
+
 ## 📄 Licencia
 
 MIT License - Ver [LICENSE](LICENSE) para detalles.

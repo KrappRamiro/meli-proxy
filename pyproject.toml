@@ -39,9 +39,10 @@ dependencies = [
     "python-dotenv>=1.0.0",
     # Recarga automática de configuración al modificar YAML
     "watchdog>=6.0.0",
-
     # Los tipos para PyYAML
-    "types-PyYAML >=6.0.12"
+    "types-PyYAML >=6.0.12",
+    # Para exponer las métricas de Prometheus
+    "prometheus-fastapi-instrumentator >= 7.1.0"
 ]
 
 # Dependencias opcionales
