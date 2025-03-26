@@ -5,7 +5,7 @@ Proxy de APIs con sistema de rate limiting escalable para MercadoLibre.
 ## Limites técnicos:
 
 - Solamente se puede cargar un archivo de configuración (`config.yaml`) y este solamente puede tener el encoding UTF-8.
-- Solamente soporta `Content-Type: Application/json`
+- Solamente soporta `Content-Type: Application/json`. Esto es porque la app rompe en caso de consultar APIs de geolocalización
 
 ## 🚀 Instalación
 
@@ -14,7 +14,7 @@ Proxy de APIs con sistema de rate limiting escalable para MercadoLibre.
 git clone https://github.com/tuusuario/api-proxy.git
 cd api-proxy
 
-# 2. Crear entorno virtual (Python 3.12+)
+# 2. Crear venv (Python 3.12)
 python -m venv .venv
 source .venv/bin/activate  # Linux/Mac
 .\.venv\Scripts\activate  # Windows

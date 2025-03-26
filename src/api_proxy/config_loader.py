@@ -1,4 +1,9 @@
 """
+Este módulo se encarga de cargar la configuración de nuestra app.
+
+Este recibe la ubicación de un archivo config.yaml del cual obtener la configuración, y parsea este archivo
+para transformarlo en una lista de Rules
+
 Ver https://stackoverflow.com/questions/32923451/how-to-run-an-function-when-anything-changes-in-a-dir-with-python-watchdog
 Y https://pythonhosted.org/watchdog/quickstart.html
 """
@@ -60,7 +65,12 @@ class ConfigLoader:
 
 class ConfigWatcher:
     """
-    watchea cambios en el archivo de config y ejecuta un callback cuando hay cambios.
+    Observa cambios en el archivo de config y ejecuta un callback cuando hay cambios.
+
+    Para hacer el watch, usa la clase FileUpdateHandler, que observa una path y cada vez que se actualiza, llama a una función callback
+
+    Esta clase NO se encarga de reloadear la config cargada en memoria, sino que espera que eso lo haga la función callback que sea pasada.
+    O sea, se le debería pasar como callback una función reload() que recargue la config
 
     Attributes:
         observer (Observer): Instancia de Observer que mire cambios en el filesystem
@@ -84,13 +94,19 @@ class ConfigWatcher:
 
     def start(self) -> None:
         """Inicia la monitorización del archivo de config."""
+
         # Si algun día se implementa para que mire un directorio en vez de un solo archivo, quizas convenga poner recursive=false
-        self.observer.schedule(self.handler, path=str(Path(self.config_path).parent), recursive=False)
+        self.observer.schedule(
+            self.handler,  # el handler DEBE ser un FileSystemEventHandler
+            path=str(Path(self.config_path).parent),  # El path a monitorear
+            recursive=False,  # Si recursive = true, monitorea subdirectorios
+        )
         logging.info("Iniciando watcheo de %s", self.config_path)
         self.observer.start()
 
     def stop(self) -> None:
         """Detiene el watcheo y libera recursos."""
+        # Se usa stop() y despues join() porque así está en la documentación
         self.observer.stop()
         self.observer.join()
 
@@ -98,6 +114,8 @@ class ConfigWatcher:
 class FileUpdateHandler(FileSystemEventHandler):
     """
     Handler de eventos para cambios en el archivo de configuración.
+
+    Observa target_path, y cada vez que se actualiza llama a la función callback
     """
 
     def __init__(self, target_path: str, callback: callable):

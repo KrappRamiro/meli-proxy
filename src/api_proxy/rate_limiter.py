@@ -60,6 +60,7 @@ class RateLimiter:
             if not rule.matches(ip, path):
                 logger.debug("La regla no aplica - omitiendo")
                 continue
+            logger.debug("❗ La regla aplica!")
 
             key = rule.generate_key(ip, path)
             logger.debug("Key generada en Redis: %s", key)

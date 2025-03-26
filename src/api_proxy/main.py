@@ -4,12 +4,11 @@ from contextlib import asynccontextmanager
 from typing import Any
 
 import httpx
-from fastapi import FastAPI, HTTPException, Request
+from fastapi import FastAPI, HTTPException, Request, Response
 from fastapi.responses import JSONResponse
 
 from .config_loader import ConfigLoader, ConfigWatcher
 from .rate_limiter import RateLimiter
-from .rules import parse_rules
 from .utils import setup_redis_client
 
 # TODO: Reemplazar carga de variables de entorno por https://evarify.readthedocs.io/
@@ -81,55 +80,67 @@ logger = logging.getLogger("uvicorn.error")
 
 # Acá devolvemos Any, porque no sabemos que puede llegar a devolver la API de MeLi
 @app.api_route("/{path:path}")
+# Para más info sobre Request, ver https://fastapi.tiangolo.com/advanced/using-request-directly/#using-the-request-directly
 async def proxy_request(request: Request, path: str) -> Any:
     """
     Proxy the request to the MercadoLibre API
     """
 
-    # We need the client_ip to rate-limit later
+    # Why this is here? There are some cases where request.client can be None, to see when,
+    # read https://github.com/encode/starlette/discussions/2244#discussioncomment-6694242
     if request.client is None:
         raise HTTPException(
-            detail="For some reason, request.client was None",
-            status_code=400,
+            detail="""For some reason, request.client was None.
+            That only happens on this case: https://github.com/encode/starlette/discussions/2244#discussioncomment-6694242 .
+            Maybe uvicorn is listening on a UNIX socket, and its misconfigured as detailed in the github starlette discussion.  """,
+            status_code=500,
         )
+    # We need the client_ip to rate-limit later,
     client_ip = request.client.host
+    # La url a la que le vamos a hacer la request
     target_url = f"{os.environ['MELI_API_URL']}/{path}"
+    logger.info("Handling a request to %s , with client IP %s", target_url, client_ip)
 
     # Verificar rate limiting usando app.state,
     # explicación de app.state en https://stackoverflow.com/a/71298949/15965186
-    logger.info("Handling a request to %s , with client IP %s", target_url, client_ip)
     if not await request.app.state.rate_limiter.is_allowed(client_ip, path):
         # Raise a HTTP 429 Too Many Requests
         logger.warning("The request to %s , with client IP %s , has rate-limited", target_url, client_ip)
         raise HTTPException(status_code=429, detail="Too Many Requests (Rate limit exceeded)")
 
+    # Intentamos hacer la request
     try:
         async with httpx.AsyncClient() as client:
             # Send request
             response = await client.request(
                 method=request.method,
                 url=target_url,
+                # TODO: Ver por qué, si yo uso los headers de la request, Heroku (probablemente de mockapi) me falla con un error de certificados SSL
                 headers={
-                    # TODO: lograr overridear request.headers
-                    # **dict(request.headers),
-                    "User-Agent": "(httpx/async, krappramiro.jpg@gmail.com)",
-                    "Accept": "application/json",
+                    "Accept": "*",
                 },
+                # Acá convertimos reponse.query_params a un diccionario ya que FastAPI espera que params sea un dict.
                 params=dict(request.query_params),
                 content=await request.body(),
             )
 
+        logger.debug("Response received - Status: %s", response.status_code)
+
         # Una vez terminada la request de httpx, retornamos la response que nos dió la API de MeLi
-        return JSONResponse(
-            content=response.json(),
+        # Devolvemos la Response cruda, manteniendo los headers originales
+        return Response(
+            content=response.content,
             status_code=response.status_code,
+            # Acá convertimos reponse.headers a un diccionario ya que FastAPI espera que headers sea un dict.
             headers=dict(response.headers),
         )
 
-    except Exception as e:
-        logger.error("🚨 Backend Proxy Error: %s", e)
+    except httpx.HTTPError as e:
+        logger.error("HTTP error: %s", str(e))
         # Use `from e` to comply with https://pylint.readthedocs.io/en/latest/user_guide/messages/warning/raise-missing-from.html
-        raise HTTPException(
-            detail=f"Internal Proxy Error: {e}",
-            status_code=500,
-        ) from e
+        raise HTTPException(status_code=500, detail="Error connecting to upstream service") from e
+
+    except Exception as e:
+        logger.exception("Internal server error")
+        # Use `from e` to comply with https://pylint.readthedocs.io/en/latest/user_guide/messages/warning/raise-missing-from.html
+        raise HTTPException(status_code=500, detail="Internal Server Error") from e
