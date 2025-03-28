@@ -124,14 +124,41 @@ sequenceDiagram
   create participant instrumentator
   Lifespan->>instrumentator: Inicia el instrumentador de Prometheus en app.state
   SistemaOperativo->>App: SIGTERM
+
+  %% Destroy Redis Client
   destroy redis_client
+  Lifespan-xredis_client: Cerrá la conexión
+
+  %% Destroy ConfigWatcher
   destroy ConfigWatcher
+  Lifespan-xConfigWatcher: Dejá de mirar el archivo
+
+  %% Destroy Lifespan
   destroy Lifespan
-  destroy RateLimiter
-  destroy ConfigLoader
-  destroy instrumentator
+  App-xLifespan: Termina el lifespan
+
+  par App to RateLimiter
+    %% Destroy RateLimiter
+    destroy RateLimiter
+    App-xRateLimiter: Es desinstanciado al terminar la app
+
+  and App to ConfigLoader
+
+    %% Destroy ConfigLoader
+    destroy ConfigLoader
+    App-xConfigLoader: Es desinstanciado al terminar la app
+
+  and App to instrumentator
+
+    %% Destroy instrumentator
+    destroy instrumentator
+    App-xinstrumentator :Es desinstanciado al terminar la app
+
+  end
+
+  %% Destroy app
   destroy App
-  SistemaOperativo->>App: SIGTERM
+  SistemaOperativo-xApp: Es terminada la app
 ```
 
 ##
