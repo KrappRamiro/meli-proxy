@@ -49,6 +49,7 @@ class RateLimiter:
             bool: True si se permite, False si se excede algún límite
 
         """
+        # TODO: Hacer que is_allowed solamente consulte si está permitido, y que no sea la función responsable de aumentar en 1 la cantidad de request a cada Rule
         logger.debug("Iniciando evaluación de rate limiting para IP: %s, Path: %s", ip, path)
         for rule in self.rules:
             logger.debug("Evaluando regla: %s", pformat(rule))

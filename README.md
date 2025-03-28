@@ -161,7 +161,27 @@ sequenceDiagram
   SistemaOperativo-xApp: Es terminada la app
 ```
 
-##
+## Secuencia de cada request
+
+```mermaid
+sequenceDiagram
+actor client
+participant App
+participant API_MeLi
+participant RateLimiter
+client->>App: Se hace una request a /proxy/whatever
+App->>RateLimiter: Consulta con RateLimiter.is_allowed si la request debe ser rate-limiteada
+alt is rate limited
+  App->>client: Responde con un 429 RATE LIMIT
+else is not rate limited
+  App->>API_MeLi: Hace una request a /whatever
+  API_MeLi->>App: Devuelve una response
+  App->>client: Devuelve la response de API_MeLi
+end
+
+
+
+```
 
 ## 📄 Licencia
 
