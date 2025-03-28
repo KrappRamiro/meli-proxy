@@ -108,57 +108,59 @@ Bajo el endpoint `health/` se expone un healthcheck que responde con un 200 OK s
 
 ```mermaid
 sequenceDiagram
-  participant SistemaOperativo
-  create participant App
-  SistemaOperativo->>App: Inicia la app
-  create participant Lifespan
-  App->>Lifespan: La app se instancia con el lifespan definido en la función lifespan
-  create participant redis_client
-  Lifespan->>redis_client: Inicia el redis client en app.state
-  create participant RateLimiter
-  Lifespan->>RateLimiter: Instancia un rate limiter en app.state
-  create participant ConfigLoader
-  Lifespan->>ConfigLoader: Instancia un ConfigLoader en app.state
-  create participant ConfigWatcher
-  Lifespan->>ConfigWatcher: Instancia un ConfigWatcher en app.state
-  create participant instrumentator
-  Lifespan->>instrumentator: Inicia el instrumentador de Prometheus en app.state
-  SistemaOperativo->>App: SIGTERM
+participant SistemaOperativo
+create participant App
+SistemaOperativo->>App: Inicia la app
+create participant Lifespan
+App->>Lifespan: La app se instancia con el lifespan definido en la función lifespan
+create participant redis_client
+Lifespan->>redis_client: Inicia el redis client en app.state
+create participant RateLimiter
+Lifespan->>RateLimiter: Instancia un rate limiter en app.state
+create participant ConfigLoader
+Lifespan->>ConfigLoader: Instancia un ConfigLoader en app.state
+create participant ConfigWatcher
+Lifespan->>ConfigWatcher: Instancia un ConfigWatcher en app.state
+create participant instrumentator
+Lifespan->>instrumentator: Inicia el instrumentador de Prometheus en app.state
+SistemaOperativo->>App: SIGTERM
 
-  %% Destroy Redis Client
-  destroy redis_client
-  Lifespan-xredis_client: Cerrá la conexión
+%% Destroy Redis Client
+destroy redis_client
+Lifespan-xredis_client: Cerrá la conexión
 
-  %% Destroy ConfigWatcher
-  destroy ConfigWatcher
-  Lifespan-xConfigWatcher: Dejá de mirar el archivo
+%% Destroy ConfigWatcher
+destroy ConfigWatcher
+Lifespan-xConfigWatcher: Dejá de mirar el archivo
 
-  %% Destroy Lifespan
-  destroy Lifespan
-  App-xLifespan: Termina el lifespan
+%% Destroy Lifespan
+destroy Lifespan
+App-xLifespan: Termina el lifespan
 
-  par App to RateLimiter
-    %% Destroy RateLimiter
-    destroy RateLimiter
-    App-xRateLimiter: Es desinstanciado al terminar la app
+par App to RateLimiter
+  %% Destroy RateLimiter
+  destroy RateLimiter
+  App-xRateLimiter: Es desinstanciado al terminar la app
 
-  and App to ConfigLoader
+and App to ConfigLoader
 
-    %% Destroy ConfigLoader
-    destroy ConfigLoader
-    App-xConfigLoader: Es desinstanciado al terminar la app
+  %% Destroy ConfigLoader
+  destroy ConfigLoader
+  App-xConfigLoader: Es desinstanciado al terminar la app
 
-  and App to instrumentator
+and App to instrumentator
 
-    %% Destroy instrumentator
-    destroy instrumentator
-    App-xinstrumentator :Es desinstanciado al terminar la app
+  %% Destroy instrumentator
+  destroy instrumentator
+  App-xinstrumentator :Es desinstanciado al terminar la app
 
-  end
+end
 
-  %% Destroy app
-  destroy App
-  SistemaOperativo-xApp: Es terminada la app
+%% Destroy app
+destroy App
+SistemaOperativo-xApp: Es terminada la app
+
+
 ```
 
 ## Secuencia de cada request
@@ -178,9 +180,34 @@ else is not rate limited
   API_MeLi->>App: Devuelve una response
   App->>client: Devuelve la response de API_MeLi
 end
+```
+
+## Secuencia de la carga de la configuración
+
+```mermaid
+sequenceDiagram
+participant App
+participant ConfigLoader
+participant ConfigWatcher
+participant config.yaml
+participant AgenteExterno
 
 
+App->>ConfigLoader: Crea una instancia de ConfigLoader
 
+ConfigLoader->>config.yaml: Carga el archivo
+
+ConfigLoader->>App: Devuelve un objeto con dos atributos:<br/>- rules, que expone las reglas como una list[Rule],<br/>- reload, una función que recarga las reglas
+
+App->>ConfigWatcher: Instancia el ConfigWatcher pasandole la path a config.yaml y Config.reload, <br/> el cual llamará cuando se hagan cambios sobre config.yaml
+
+opt Un agente externo modifica config.yaml
+  AgenteExterno->>config.yaml: Modifica el archivo config
+
+  ConfigWatcher-->config.yaml: Recibe el evento FileSystemEventHandler
+  ConfigWatcher->>ConfigLoader: Llama a ConfigLoader.reload
+  ConfigLoader->>config.yaml: Carga el archivo
+end
 ```
 
 ## 📄 Licencia
