@@ -100,6 +100,42 @@ Se expone en el endpoint `metrics/`
 
 Ver https://github.com/trallnag/prometheus-fastapi-instrumentator
 
+## Healtcheck
+
+Bajo el endpoint `health/` se expone un healthcheck que responde con un 200 OK si la app está funcionando
+
+## Lifespan de la app
+
+```mermaid
+sequenceDiagram
+  participant SistemaOperativo
+  create participant App
+  SistemaOperativo->>App: Inicia la app
+  create participant Lifespan
+  App->>Lifespan: La app se instancia con el lifespan definido en la función lifespan
+  create participant redis_client
+  Lifespan->>redis_client: Inicia el redis client en app.state
+  create participant RateLimiter
+  Lifespan->>RateLimiter: Instancia un rate limiter en app.state
+  create participant ConfigLoader
+  Lifespan->>ConfigLoader: Instancia un ConfigLoader en app.state
+  create participant ConfigWatcher
+  Lifespan->>ConfigWatcher: Instancia un ConfigWatcher en app.state
+  create participant instrumentator
+  Lifespan->>instrumentator: Inicia el instrumentador de Prometheus en app.state
+  SistemaOperativo->>App: SIGTERM
+  destroy redis_client
+  destroy ConfigWatcher
+  destroy Lifespan
+  destroy RateLimiter
+  destroy ConfigLoader
+  destroy instrumentator
+  destroy App
+  SistemaOperativo->>App: SIGTERM
+```
+
+##
+
 ## 📄 Licencia
 
 MIT License - Ver [LICENSE](LICENSE) para detalles.

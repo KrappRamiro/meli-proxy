@@ -28,13 +28,15 @@ class ConfigLoader:
     """
     Clase responsable de cargar y recargar la config desde un archivo YAML.
 
-    Attributes:
-        config_path (str): Ruta del archivo de config.
-        rules (dict): Diccionario con las reglas cargadas del archivo.
     """
 
     def __init__(self, config_path: str):
-        """Inicializa el cargador y lee el archivo de config."""
+        """
+        Objeto para leer el archivo de configuración
+
+        Args:
+            config_path (str): Ruta del archivo de config.
+        """
         self.config_path = config_path
         self.rules = self._load_config()
 
@@ -45,8 +47,8 @@ class ConfigLoader:
         Returns:
             dict: Diccionario con las reglas de configuración.
         """
-        # Si no especificamos el encoding, pylint se queja :(
         logger.info("Cargando el archivo de config: %s", self.config_path)
+        # Si no especificamos el encoding, pylint se queja :(
         with open(self.config_path, encoding="utf-8") as f:
             loaded_rules = yaml.safe_load(f)
             logger.debug("REGLAS CARGADAS:\n%s", pformat(loaded_rules))
@@ -72,7 +74,7 @@ class ConfigWatcher:
     Esta clase NO se encarga de reloadear la config cargada en memoria, sino que espera que eso lo haga la función callback que sea pasada.
     O sea, se le debería pasar como callback una función reload() que recargue la config
 
-    Attributes:
+    Args:
         observer (Observer): Instancia de Observer que mire cambios en el filesystem
         handler (FileUpdateHandler): handler cuando haya un evento onChange
     """

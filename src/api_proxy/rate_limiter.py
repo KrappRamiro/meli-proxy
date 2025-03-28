@@ -15,10 +15,6 @@ logger = logging.getLogger("uvicorn.error")
 class RateLimiter:
     """
     Servicio principal que aplica las reglas de rate limiting.
-
-    Atributos:
-        redis (redis.Redis): Conexión a Redis
-        rules (List[Rule]): Reglas activas para evaluación
     """
 
     def __init__(self, redis_client: redis.asyncio.Redis, rules: list[Rule]):
