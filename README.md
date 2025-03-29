@@ -5,7 +5,6 @@ Proxy de APIs con sistema de rate limiting escalable para MercadoLibre.
 ## Limites técnicos:
 
 - Solamente se puede cargar un archivo de configuración (`config.yaml`) y este solamente puede tener el encoding UTF-8.
-- Solamente soporta `Content-Type: Application/json`. Esto es porque la app rompe en caso de consultar APIs de geolocalización
 
 ## 🚀 Instalación
 
@@ -103,6 +102,75 @@ Ver https://github.com/trallnag/prometheus-fastapi-instrumentator
 ## Healtcheck
 
 Bajo el endpoint `health/` se expone un healthcheck que responde con un 200 OK si la app está funcionando
+
+## Diagrama de clases
+
+### Rules
+
+```mermaid
+classDiagram
+
+class Rule {
+  int limit
+  int window
+  matches(self, ip, path) bool
+  generate_key(ip, str) str
+}
+
+Rule <|-- IPRule
+Rule <|-- PathRule
+Rule <|-- IPPathRule
+
+class IPRule {
+  int limit
+  int window
+  matches(self, ip, path) bool
+  generate_key(ip, str) str
+}
+
+class PathRule {
+  int limit
+  int window
+  matches(self, ip, path) bool
+  generate_key(ip, str) str
+}
+
+class IPPathRule {
+  int limit
+  int window
+  matches(self, ip, path) bool
+  generate_key(ip, str) str
+}
+
+class ConfigLoader {
+  str config_path
+  list[Rule] rules
+  -load_config(self) list[Rule]
+  +reload(self) None
+}
+
+class ConfigWatcher {
+  Observer observer
+  str config_path
+  FileUpdateHandler handler
+  +start(self) None
+  +stop(self) None
+}
+
+class FileUpdateHandler {
+  str target_path
+  callable callback
+  +on_modified(self, event) None
+}
+
+class RateLimiter {
+  redis.asyncio.Redis redis_client
+  list[Rule] rules
+  +load_rules(self, rules) None
+  +is_allowed(self, ip, path) bool
+}
+
+```
 
 ## Lifespan de la app
 
