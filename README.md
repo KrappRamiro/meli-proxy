@@ -67,14 +67,6 @@ docker build -t api-proxy .
 docker run -p 8080:80 api-proxy
 ```
 
-## 📊 Métricas de Rendimiento
-
-Pruebas de carga con `wrk`:
-
-```bash
-wrk -t12 -c400 -d30s http://localhost:8080/categories/MLA97994
-```
-
 ## Explicaciones del desarrollo
 
 ### Para qué crear la carpeta `src/api_proxy/`

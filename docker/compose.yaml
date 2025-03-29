@@ -13,3 +13,20 @@ services:
       retries: 20
     ports:
       - ${REDIS___EXTERNAL_PORT:-6379}:${REDIS___INTERNAL_PORT:-6379}
+
+  app:
+    build:
+      context: ../
+      dockerfile: docker/Dockerfile
+    healthcheck:
+      test: ["CMD-SHELL", "curl 127.0.0.1:8080/health"]
+      interval: 10s
+      timeout: 30s
+      retries: 20
+      start_period: 30s
+    ports:
+      - ${APP___EXTERNAL_PORT:-8085}:${APP___INTERNAL_PORT:-8080}
+    env_file:
+      - ../.docker.env
+    volumes:
+      - ../config/config.yaml:/config/config.yaml
