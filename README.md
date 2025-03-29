@@ -105,177 +105,229 @@ Bajo el endpoint `health/` se expone un healthcheck que responde con un 200 OK s
 
 ## Diagrama de clases
 
-### Rules
-
 ```mermaid
 classDiagram
+    direction LR
 
-class Rule {
-  int limit
-  int window
-  matches(self, ip, path) bool
-  generate_key(ip, str) str
-}
+    class Rule {
+        <<Abstract>>
+        +int limit
+        +int window
+        +matches(ip: str, path: str) bool
+        +generate_key(ip: str, path: str) str
+    }
 
-Rule <|-- IPRule
-Rule <|-- PathRule
-Rule <|-- IPPathRule
+    class IPRule {
+        +str ip
+        +matches(ip: str, path: str) bool
+        +generate_key(ip: str, path: str) str
+    }
 
-class IPRule {
-  int limit
-  int window
-  matches(self, ip, path) bool
-  generate_key(ip, str) str
-}
+    class PathRule {
+        +str pattern
+        +matches(ip: str, path: str) bool
+        +generate_key(ip: str, path: str) str
+    }
 
-class PathRule {
-  int limit
-  int window
-  matches(self, ip, path) bool
-  generate_key(ip, str) str
-}
+    class IPPathRule {
+        +str ip
+        +str pattern
+        +matches(ip: str, path: str) bool
+        +generate_key(ip: str, path: str) str
+    }
 
-class IPPathRule {
-  int limit
-  int window
-  matches(self, ip, path) bool
-  generate_key(ip, str) str
-}
+    class ConfigLoader {
+        +str config_path
+        +list[Rule] rules
+        +reload(self) None
+        -_load_config() list[Rule]
+    }
 
-class ConfigLoader {
-  str config_path
-  list[Rule] rules
-  -load_config(self) list[Rule]
-  +reload(self) None
-}
+    class ConfigWatcher {
+        +Observer observer
+        +str config_path
+        +FileUpdateHandler handler
+        +start(self) None
+        +stop(self) None
+    }
 
-class ConfigWatcher {
-  Observer observer
-  str config_path
-  FileUpdateHandler handler
-  +start(self) None
-  +stop(self) None
-}
+    class FileUpdateHandler {
+        +str target_path
+        +callable callback
+        +on_modified(self, event) None
+    }
 
-class FileUpdateHandler {
-  str target_path
-  callable callback
-  +on_modified(self, event) None
-}
+    class RateLimiter {
+        +redis.asyncio.Redis redis_client
+        +list[Rule] rules
+        +is_allowed(self, ip: str, path: str) bool
+        +load_rules(self, rules: list[Rule]) None
+    }
 
-class RateLimiter {
-  redis.asyncio.Redis redis_client
-  list[Rule] rules
-  +load_rules(self, rules) None
-  +is_allowed(self, ip, path) bool
-}
+    %% B --|> A means "B inherits from A"
+    IPRule --|> Rule: inherits
+    PathRule --|> Rule: inherits
+    IPPathRule --|> Rule: inherits
 
+    %% *-- means Composition
+    %% Composition implies that the parent (ConfigWatcher) owns the child (FileUpdateHandler),
+    %% and the child can't exist without the parent
+    ConfigWatcher *-- FileUpdateHandler: Es el handler que usa para llamar a la función de callback
+
+    %% === Associations ===
+    %% --> means Association
+    %% based on https://stackoverflow.com/a/1230901/15965186
+    %% An association almost always implies that one object has the other object as a field/property/attribute (terminology differs).
+    %% Association: A has-a C object (as a member variable)
+
+    RateLimiter --> Rule: Lo acepta como parametro
+
+    %% --------------------
+
+
+    %% === Dependencies ===
+    %% ..> means Dependency
+    %% based on https://stackoverflow.com/a/1230901/15965186
+    %% A dependency typically (but not always) implies that an object accepts another object as a method parameter, instantiates, or uses another object. A dependency is very much implied by an association.
+    %% Dependency: A references B (as a method parameter or return type)
+
+    RateLimiter ..> ConfigLoader : Lo usa para obtener las reglas
+    ConfigWatcher ..> ConfigLoader: Llama a reload() cuando hay un cambio en config.yaml
+
+    %% --------------------
+
+    note for ConfigWatcher "Implements Observer pattern for config file changes"
+    note for RateLimiter "Uses Redis INCR+EXPIRE"
+    note for FileUpdateHandler "Filters duplicate filesystem events"
 ```
 
 ## Lifespan de la app
 
 ```mermaid
 sequenceDiagram
-participant SistemaOperativo
-create participant App
-SistemaOperativo->>App: Inicia la app
-create participant Lifespan
-App->>Lifespan: La app se instancia con el lifespan definido en la función lifespan
-create participant redis_client
-Lifespan->>redis_client: Inicia el redis client en app.state
-create participant RateLimiter
-Lifespan->>RateLimiter: Instancia un rate limiter en app.state
-create participant ConfigLoader
-Lifespan->>ConfigLoader: Instancia un ConfigLoader en app.state
-create participant ConfigWatcher
-Lifespan->>ConfigWatcher: Instancia un ConfigWatcher en app.state
-create participant instrumentator
-Lifespan->>instrumentator: Inicia el instrumentador de Prometheus en app.state
-SistemaOperativo->>App: SIGTERM
+    participant SistemaOperativo
+    participant App
+    box Componentes Internos
+        participant Redis
+        participant RateLimiter
+        participant ConfigLoader
+        participant ConfigWatcher
+        participant Prometheus Instrumentator
+    end
 
-%% Destroy Redis Client
-destroy redis_client
-Lifespan-xredis_client: Cerrá la conexión
+    SistemaOperativo->>App: Inicia aplicación
+    activate App
 
-%% Destroy ConfigWatcher
-destroy ConfigWatcher
-Lifespan-xConfigWatcher: Dejá de mirar el archivo
+    App->>Redis: Se conecta a Redis
+    activate Redis
+    App->>ConfigLoader: Carga config.yaml
+    activate ConfigLoader
+    App->>RateLimiter: Inicializa con reglas de ConfigLoader
+    activate RateLimiter
+    App->>ConfigWatcher: Inicia monitoreo de cambios en config.yaml
+    activate ConfigWatcher
+    App->>Prometheus Instrumentator: Expone métricas
+    activate Prometheus Instrumentator
 
-%% Destroy Lifespan
-destroy Lifespan
-App-xLifespan: Termina el lifespan
+    SistemaOperativo->>App: SIGTERM
 
-par App to RateLimiter
-  %% Destroy RateLimiter
-  destroy RateLimiter
-  App-xRateLimiter: Es desinstanciado al terminar la app
+    App->>ConfigWatcher: Detiene el watch usando stop()
+    deactivate ConfigWatcher
+    App->>Redis: Cierra la conexión
+    deactivate Redis
 
-and App to ConfigLoader
+    par App to RateLimiter
+      App->>RateLimiter: Desinstanciado automáticamente
+      deactivate RateLimiter
+    and App to ConfigLoader
+      App->>ConfigLoader: Desinstanciado automáticamente
+      deactivate ConfigLoader
+    and App to Prometheus Instrumentator
+      App->>Prometheus Instrumentator: Desinstanciado automáticamente
+      deactivate Prometheus Instrumentator
+    end
+    deactivate App
 
-  %% Destroy ConfigLoader
-  destroy ConfigLoader
-  App-xConfigLoader: Es desinstanciado al terminar la app
-
-and App to instrumentator
-
-  %% Destroy instrumentator
-  destroy instrumentator
-  App-xinstrumentator :Es desinstanciado al terminar la app
-
-end
-
-%% Destroy app
-destroy App
-SistemaOperativo-xApp: Es terminada la app
-
-
+    SistemaOperativo-->>App: Proceso finalizado
 ```
 
 ## Secuencia de cada request
 
 ```mermaid
 sequenceDiagram
-actor client
-participant App
-participant API_MeLi
-participant RateLimiter
-client->>App: Se hace una request a /proxy/whatever
-App->>RateLimiter: Consulta con RateLimiter.is_allowed si la request debe ser rate-limiteada
-alt is rate limited
-  App->>client: Responde con un 429 RATE LIMIT
-else is not rate limited
-  App->>API_MeLi: Hace una request a /whatever
-  API_MeLi->>App: Devuelve una response
-  App->>client: Devuelve la response de API_MeLi
-end
+    actor Cliente
+    participant App
+    participant RateLimiter
+    participant Redis
+    participant API_MeLi
+
+    Cliente->>+App: Request a /proxy/{path}
+
+    App->>+RateLimiter: Consulta si está permitido (IP + Path)
+
+    loop Para cada Regla
+        RateLimiter->>+Redis: Incrementa contador (INCR)
+        alt Primera request
+            Redis-->>RateLimiter: Valor 1
+            RateLimiter->>Redis: Establece TTL (EXPIRE)
+        else Requests subsiguientes
+            Redis-->>RateLimiter: Contador actual
+        end
+
+        alt Límite de requests excedido
+            RateLimiter-->>App: Denegar request <br/> devolviendo false en is_allowed
+            App-->>Cliente: Responder 429 Too Many Requests
+        end
+    end
+
+    RateLimiter-->>-App: Permitir request <br/> devolviendo true en is_allowed
+    App->>+API_MeLi: Proxy de la solicitud
+    API_MeLi-->>-App: Response de API
+    App-->>-Cliente: Retorna response original
 ```
 
 ## Secuencia de la carga de la configuración
 
 ```mermaid
 sequenceDiagram
-participant App
-participant ConfigLoader
-participant ConfigWatcher
-participant config.yaml
-participant AgenteExterno
+    participant App
+    participant ConfigLoader
+    participant ConfigWatcher
+    participant FileSystem
+    participant RateLimiter
 
+    App->>ConfigLoader: Crea ConfigLoader con ruta config.yaml
+    activate ConfigLoader
+    ConfigLoader->>FileSystem: Lee archivo config.yaml
+    FileSystem-->>ConfigLoader: Devuelve contenido YAML
+    ConfigLoader->>ConfigLoader: Parsea reglas con parse_rules()
+    ConfigLoader->>RateLimiter: Actualiza reglas con load_rules()
+    ConfigLoader-->>App: Retorna instancia configurada
+    deactivate ConfigLoader
 
-App->>ConfigLoader: Crea una instancia de ConfigLoader
+    App->>ConfigWatcher: Instancia ConfigWatcher (config.yaml, callback=ConfigLoader.reload)
+    activate ConfigWatcher
+    ConfigWatcher->>FileSystem: Comienza monitoreo de cambios
+    ConfigWatcher-->>App: Watcher iniciado
+    deactivate ConfigWatcher
 
-ConfigLoader->>config.yaml: Carga el archivo
-
-ConfigLoader->>App: Devuelve un objeto con dos atributos:<br/>- rules, que expone las reglas como una list[Rule],<br/>- reload, una función que recarga las reglas
-
-App->>ConfigWatcher: Instancia el ConfigWatcher pasandole la path a config.yaml y Config.reload, <br/> el cual llamará cuando se hagan cambios sobre config.yaml
-
-opt Un agente externo modifica config.yaml
-  AgenteExterno->>config.yaml: Modifica el archivo config
-
-  ConfigWatcher-->config.yaml: Recibe el evento FileSystemEventHandler
-  ConfigWatcher->>ConfigLoader: Llama a ConfigLoader.reload
-  ConfigLoader->>config.yaml: Carga el archivo
-end
+    loop Monitoreo de filesystem
+        ConfigWatcher->>FileSystem: Observa cambios en config.yaml
+        alt En caso de archivo modificado
+            FileSystem->>ConfigWatcher: Notifica evento on_modified
+            activate ConfigWatcher
+            ConfigWatcher->>ConfigLoader: Ejecuta callback reload()
+            activate ConfigLoader
+            ConfigLoader->>FileSystem: Vuelve a leer config.yaml
+            FileSystem-->>ConfigLoader: Nuevo contenido del archivo
+            ConfigLoader->>ConfigLoader: Re-parsea reglas
+            ConfigLoader->>RateLimiter: Actualiza reglas con load_rules(new_rules)
+            ConfigLoader-->>ConfigWatcher: Recarga completada
+            deactivate ConfigLoader
+            ConfigWatcher-->>FileSystem: Continúa monitoreo del filesystem
+            deactivate ConfigWatcher
+        end
+    end
 ```
 
 ## 📄 Licencia

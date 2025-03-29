@@ -118,6 +118,8 @@ class FileUpdateHandler(FileSystemEventHandler):
     Handler de eventos para cambios en el archivo de configuración.
 
     Observa target_path, y cada vez que se actualiza llama a la función callback
+
+    Se uso una clase aparte porque tenía que heredar de FileSystemEventHandler
     """
 
     def __init__(self, target_path: str, callback: callable):

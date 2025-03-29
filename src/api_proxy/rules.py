@@ -11,6 +11,9 @@ from .utils import matches_pattern
 
 logger = logging.getLogger("uvicorn.error")
 
+# TODO: No está bueno que las subclases de Rule necesiten ip y path como parámetros, si no todas las usan.
+# Puede ser que la mejor forma de hacerlo sea pasar un objeto, con **kwargs
+
 
 class Rule(BaseModel):
     """
