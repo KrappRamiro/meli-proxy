@@ -32,7 +32,7 @@ ingress:
 livenessProbe:
   httpGet:
     path: /health
-    port: 80
+    port: 8080
   # See https://kubernetes.io/docs/tasks/configure-pod-container/configure-liveness-readiness-startup-probes/#configure-probes
   initialDelaySeconds: 3
   periodSeconds: 1
@@ -41,7 +41,7 @@ livenessProbe:
 readinessProbe:
   httpGet:
     path: /health
-    port: 80
+    port: 8080
   # See https://kubernetes.io/docs/tasks/configure-pod-container/configure-liveness-readiness-startup-probes/#configure-probes
   initialDelaySeconds: 3
   periodSeconds: 1
