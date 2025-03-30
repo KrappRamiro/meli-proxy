@@ -1,0 +1,108 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Especificación de Configuración de Rate Limiting",
+  "description": "Valida las reglas de límite de solicitudes para el proxy de MercadoLibre",
+  "type": "object",
+  "properties": {
+    "rules": {
+      "type": "array",
+      "description": "Listado de reglas que definen los límites de solicitudes. Debe contener al menos una regla.",
+      "minItems": 1,
+      "items": {
+        "oneOf": [
+          {
+            "type": "object",
+            "description": "Regla por dirección IP específica",
+            "properties": {
+              "type": {
+                "type": "string",
+                "const": "ip",
+                "description": "Tipo de regla: límite por IP única"
+              },
+              "ip": {
+                "type": "string",
+                "format": "ipv4",
+                "description": "Dirección IPv4 a limitar (ej: 192.168.1.1)"
+              },
+              "limit": {
+                "type": "integer",
+                "minimum": 1,
+                "description": "Cantidad máxima de solicitudes permitidas en la ventana de tiempo"
+              },
+              "window": {
+                "type": "integer",
+                "minimum": 1,
+                "description": "Duración de la ventana de tiempo en segundos"
+              }
+            },
+            "required": ["type", "ip", "limit", "window"],
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "description": "Regla por patrón de ruta",
+            "properties": {
+              "type": {
+                "type": "string",
+                "const": "path",
+                "description": "Tipo de regla: límite por patrón de URL"
+              },
+              "pattern": {
+                "type": "string",
+                "pattern": "^[a-zA-Z0-9_/\\*]+$",
+                "description": "Patrón de ruta usando wildcards (*). Ej: 'items/*' aplica a /items/MLA123"
+              },
+              "limit": {
+                "type": "integer",
+                "minimum": 1,
+                "description": "Máximo de solicitudes permitidas para esta ruta"
+              },
+              "window": {
+                "type": "integer",
+                "minimum": 1,
+                "description": "Ventana temporal en segundos para el conteo"
+              }
+            },
+            "required": ["type", "pattern", "limit", "window"],
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "description": "Regla combinada IP + Ruta",
+            "properties": {
+              "type": {
+                "type": "string",
+                "const": "ip_path",
+                "description": "Tipo de regla: límite combinado para IP y ruta específica"
+              },
+              "ip": {
+                "type": "string",
+                "format": "ipv4",
+                "description": "Dirección IPv4 afectada por esta regla"
+              },
+              "pattern": {
+                "type": "string",
+                "pattern": "^[a-zA-Z0-9_/\\*]+$",
+                "description": "Patrón de URL que activa esta regla"
+              },
+              "limit": {
+                "type": "integer",
+                "minimum": 1,
+                "description": "Límite combinado para IP + ruta"
+              },
+              "window": {
+                "type": "integer",
+                "minimum": 1,
+                "description": "Período de tiempo para el límite"
+              }
+            },
+            "required": ["type", "ip", "pattern", "limit", "window"],
+            "additionalProperties": false
+          }
+        ]
+      }
+    }
+  },
+  "required": ["rules"],
+  "additionalProperties": false
+}

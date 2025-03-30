@@ -1,0 +1,6 @@
+{
+  // Con esto, logramos que VSCode valide config.yaml contra el esquema de spec.json
+  "yaml.schemas": {
+    "config/config-spec.json": "file:///home/krapp/dev/meli-proxy/config/config.yaml"
+  }
+}

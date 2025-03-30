@@ -11,10 +11,18 @@ Proxy de APIs escalable con sistema de rate limiting para MercadoLibre.
     - [🧪 Ejecución de tests](#-ejecución-de-tests)
     - [🐳 Correr con Docker](#-correr-con-docker)
   - [Documentación de endpoints](#documentación-de-endpoints)
+  - [📋 Archivo de configuración](#-archivo-de-configuración)
+    - [Estructura General](#estructura-general)
+    - [Tipos de Reglas Disponibles](#tipos-de-reglas-disponibles)
+      - [Regla por IP (`type: ip`)](#regla-por-ip-type-ip)
+      - [Regla por Route (`type: path`)](#regla-por-route-type-path)
+      - [Regla combinada de IP y Route (`type: ip_path`)](#regla-combinada-de-ip-y-route-type-ip_path)
+    - [Ejemplo de `config.yaml`](#ejemplo-de-configyaml)
   - [Explicaciones del desarrollo](#explicaciones-del-desarrollo)
     - [Para qué crear la carpeta `src/api_proxy/`](#para-qué-crear-la-carpeta-srcapi_proxy)
     - [Por qué `src/api_proxy/` tiene un archivo `__init__.py`?](#por-qué-srcapi_proxy-tiene-un-archivo-__init__py)
     - [Por qué se puso el proxy bajo el endpoint `proxy/`](#por-qué-se-puso-el-proxy-bajo-el-endpoint-proxy)
+    - [Qué es `config/config-spec.json`?](#qué-es-configconfig-specjson)
   - [Integración con Prometheus](#integración-con-prometheus)
   - [Healtcheck](#healtcheck)
   - [Diagrama de clases](#diagrama-de-clases)
@@ -115,6 +123,99 @@ docker compose up --build
 
 Para verlo, levantar la app y acceder al endpoint `docs/`
 
+## 📋 Archivo de configuración
+
+El archivo `config/config.yaml` define las reglas de rate limiting para el proxy.
+
+Se recarga automáticamente cuando se modifican las reglas (sin necesidad de reiniciar la app).
+
+### Estructura General
+
+```yaml
+rules:
+  - type: "<tipo_regla>"
+    # ... parámetros específicos de cada regla, ver sección de Tipos de Reglas Disponibles ...
+    limit: <cantidad>
+    window: <segundos>
+```
+
+### Tipos de Reglas Disponibles
+
+#### Regla por IP (`type: ip`)
+
+```yaml
+- type: "ip"
+  ip: "<dirección_ipv4>"
+  limit: <int> # Máximo de requests
+  window: <int> # Ventana de tiempo en segundos
+```
+
+**Ejemplo:**
+
+```yaml
+- type: "ip"
+  ip: "127.0.0.1" # Rate limit para localhost
+  limit: 15 # Límite de 15 requests
+  window: 60 # Expire de 60 segundos
+```
+
+#### Regla por Route (`type: path`)
+
+```yaml
+- type: "path"
+  pattern: "<patron>" # Requerido (sintaxis de wildcard)
+  limit: <int>
+  window: <int>
+```
+
+**Ejemplos de patrones válidos:**
+
+- `user/*`: Coincide con `/user/pepe` y `/user/123`
+- `items/*`: Coincide con `/items/MLA123` y `/items/MLA456`
+- `categories`: Coincide exactamente con `/categories`
+
+Para más información de qué patrones están permitidos, ver la función `matches_pattern` en `src/api_proxy/utils.py`
+
+#### Regla combinada de IP y Route (`type: ip_path`)
+
+```yaml
+- type: "ip_path"
+  ip: "<dirección_ipv4>"
+  pattern: "<patron>"
+  limit: <int>
+  window: <int>
+```
+
+Aplica **solo** cuando coinciden **ambos** criterios
+
+Es una combinación de la regla por IP y la regla por Route
+
+Para más información de qué patrones están permitidos, ver la función `matches_pattern` en `src/api_proxy/utils.py`
+
+### Ejemplo de `config.yaml`
+
+```yaml
+rules:
+  # IP específica
+  - type: "ip"
+    ip: "100.100.100.100"
+    limit: 1000 # 1000 reqs
+    window: 60 # por minuto
+
+  # Ruta general
+  - type: "path"
+    pattern: "items/*"
+    limit: 100 # 100 reqs
+    window: 10 # cada 10 segundos
+
+  # Combinación IP + Ruta
+  - type: "ip_path"
+    ip: "192.168.1.5"
+    pattern: "user/profile"
+    limit: 30 # 30 reqs
+    window: 3600 # por hora
+```
+
 ## Explicaciones del desarrollo
 
 ### Para qué crear la carpeta `src/api_proxy/`
@@ -136,6 +237,10 @@ Si algún día se quiere convertir el proyecto en una librería, ya está todo p
 ### Por qué se puso el proxy bajo el endpoint `proxy/`
 
 Porque eso nos permite crear endpoints internos, como `health/`, `docs/` y `metrics/` sin que colisionen con la función de proxy
+
+### Qué es `config/config-spec.json`?
+
+Es un JSON schema (ver https://json-schema.org/) con la estructura que `config.yaml` debe tener
 
 ## Integración con Prometheus
 
