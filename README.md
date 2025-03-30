@@ -2,6 +2,35 @@
 
 Proxy de APIs escalable con sistema de rate limiting para MercadoLibre.
 
+- [API Proxy para MercadoLibre](#api-proxy-para-mercadolibre)
+  - [Tecnologías Usadas](#tecnologías-usadas)
+  - [Limites técnicos:](#limites-técnicos)
+  - [🚀 Setup del proyecto](#-setup-del-proyecto)
+    - [🧰 Setup para desarrollo](#-setup-para-desarrollo)
+    - [🛠 Herramientas para desarrollo](#-herramientas-para-desarrollo)
+    - [🧪 Ejecución de tests](#-ejecución-de-tests)
+    - [🐳 Correr con Docker](#-correr-con-docker)
+  - [Explicaciones del desarrollo](#explicaciones-del-desarrollo)
+    - [Para qué crear la carpeta `src/api_proxy/`](#para-qué-crear-la-carpeta-srcapi_proxy)
+    - [Por qué `src/api_proxy/` tiene un archivo `__init__.py`?](#por-qué-srcapi_proxy-tiene-un-archivo-__init__py)
+  - [Integración con Prometheus](#integración-con-prometheus)
+  - [Healtcheck](#healtcheck)
+  - [Diagrama de clases](#diagrama-de-clases)
+  - [Lifespan de la app](#lifespan-de-la-app)
+  - [Secuencia de cada request](#secuencia-de-cada-request)
+  - [Secuencia de la carga de la configuración](#secuencia-de-la-carga-de-la-configuración)
+  - [📄 Licencia](#-licencia)
+
+## Tecnologías Usadas
+
+[![Python 3.12](https://img.shields.io/badge/Python-3.12-3776AB?style=for-the-badge&logo=python&logoColor=white)](https://docs.python.org/3.12/)
+
+[![FastAPI](https://img.shields.io/badge/FastAPI-✓-009688?style=for-the-badge&logo=fastapi&logoColor=white)](https://fastapi.tiangolo.com/)
+
+[![Docker Compose](https://img.shields.io/badge/Docker_Compose-✓-2496ED?style=for-the-badge&logo=docker&logoColor=white)](https://docs.docker.com/compose/)
+
+[![Redis](https://img.shields.io/badge/Redis-✓-DC382D?style=for-the-badge&logo=redis&logoColor=white)](https://redis.io/)
+
 ## Limites técnicos:
 
 - Solamente se puede cargar un archivo de configuración (`config.yaml`) y este solamente puede tener el encoding UTF-8.
