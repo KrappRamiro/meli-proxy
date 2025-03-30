@@ -10,9 +10,11 @@ Proxy de APIs escalable con sistema de rate limiting para MercadoLibre.
     - [🛠 Herramientas para desarrollo](#-herramientas-para-desarrollo)
     - [🧪 Ejecución de tests](#-ejecución-de-tests)
     - [🐳 Correr con Docker](#-correr-con-docker)
+  - [Documentación de endpoints](#documentación-de-endpoints)
   - [Explicaciones del desarrollo](#explicaciones-del-desarrollo)
     - [Para qué crear la carpeta `src/api_proxy/`](#para-qué-crear-la-carpeta-srcapi_proxy)
     - [Por qué `src/api_proxy/` tiene un archivo `__init__.py`?](#por-qué-srcapi_proxy-tiene-un-archivo-__init__py)
+    - [Por qué se puso el proxy bajo el endpoint `proxy/`](#por-qué-se-puso-el-proxy-bajo-el-endpoint-proxy)
   - [Integración con Prometheus](#integración-con-prometheus)
   - [Healtcheck](#healtcheck)
   - [Diagrama de clases](#diagrama-de-clases)
@@ -109,6 +111,10 @@ cd docker/
 docker compose up --build
 ```
 
+## Documentación de endpoints
+
+Para verlo, levantar la app y acceder al endpoint `docs/`
+
 ## Explicaciones del desarrollo
 
 ### Para qué crear la carpeta `src/api_proxy/`
@@ -126,6 +132,10 @@ Para hacer que esta carpeta sea un **package**.
 Esto permite dos cosas: la primera es tener namespaces organizados, y la segunda es poder ejecutar código de init al importar el paquete (para hacer cosas como por ejemplo, exponer la instancia de FastAPI como parte del paquete).
 
 Si algún día se quiere convertir el proyecto en una librería, ya está todo preparado.
+
+### Por qué se puso el proxy bajo el endpoint `proxy/`
+
+Porque eso nos permite crear endpoints internos, como `health/`, `docs/` y `metrics/` sin que colisionen con la función de proxy
 
 ## Integración con Prometheus
 

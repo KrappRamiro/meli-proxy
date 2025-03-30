@@ -60,7 +60,14 @@ async def lifespan(app: FastAPI):
 
     # === Integración con Prometheus
     # See https://github.com/trallnag/prometheus-fastapi-instrumentator?tab=readme-ov-file#exposing-endpoint
-    instrumentator.expose(app, include_in_schema=True)
+    # This here accepts the same arguments any FastAPI endpoint does, i saw it in the source code :D
+    instrumentator.expose(
+        app,
+        include_in_schema=True,
+        tags=["internal_usage"],
+        summary="Prometheus metrics",
+        response_description="Returns the metrics collected by Prometheus instrumentator",
+    )
 
     # === Lógica de startup termina acá === #
     # ===================================== #
@@ -87,7 +94,12 @@ logger = logging.getLogger("uvicorn.error")
 instrumentator = Instrumentator().instrument(app)
 
 
-@app.api_route("/proxy/{path:path}")
+@app.api_route(
+    "/proxy/{path:path}",
+    tags=["proxy"],
+    summary="Proxy a request to MELI_API_URL",
+    response_description="The response from MELI_API_URL, depends on the path",
+)
 # Acá devolvemos Any, porque no sabemos que puede llegar a devolver la API de MeLi
 # Para más info sobre Request, ver https://fastapi.tiangolo.com/advanced/using-request-directly/#using-the-request-directly
 async def proxy_request(request: Request, path: str) -> Any:
@@ -169,7 +181,7 @@ class HealthCheck(BaseModel):
 
 @app.get(
     "/health",
-    tags=["healthcheck"],
+    tags=["internal_usage"],
     summary="Perform a Health Check",
     response_description="Return HTTP Status Code 200 (OK)",
     status_code=status.HTTP_200_OK,

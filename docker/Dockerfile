@@ -17,6 +17,4 @@ COPY src/ ./src/
 # Puerto expuesto
 EXPOSE 8080
 
-RUN ls -la
-
 CMD ["uvicorn", "src.api_proxy.main:app", "--host", "0.0.0.0", "--port", "8080", "--log-level", "debug"]
