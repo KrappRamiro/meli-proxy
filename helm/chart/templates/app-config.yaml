@@ -1,0 +1,11 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: config-yaml
+  labels:
+    {{- include "meli-proxy.labels" . | nindent 4 }}
+data:
+  # Está key `config.yaml` debe coincidir con volumeMounts subPath
+  config.yaml: |-
+    config:
+{{- toYaml .Values.config | nindent 6 }}

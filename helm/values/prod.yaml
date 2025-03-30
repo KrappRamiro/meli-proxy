@@ -1,0 +1,107 @@
+# Values used in the prod environment
+
+# This block is for setting up the ingress for more information can be found here: https://kubernetes.io/docs/concepts/services-networking/ingress/
+ingress:
+  enabled: true
+  className: nginx
+  hosts:
+    - host: meli-proxy.krappramiro.xyz
+      paths:
+        - path: /
+          pathType: Prefix
+  annotations:
+    # Esto tiene que coincidir con el ClusterIssuer creado en https://docs.testing.espinlabs.com.ar/devops/setup-k8s/#setup-tls.
+    cert-manager.io/cluster-issuer: "letsencrypt-tls-clusterissuer"
+    # Estas dos lineas nos permiten redirigir HTTP a HTTPS
+    nginx.ingress.kubernetes.io/force-ssl-redirect: "true" # Annotation should be string
+    nginx.ingress.kubernetes.io/ssl-passthrough: "true" # Annotation should be string
+  tls:
+    - hosts:
+        - meli-proxy.krappramiro.xyz
+      # secretName specifies the name of the Kubernetes Secret that will store the TLS certificate and private key for the domain(s) listed under the hosts field.
+      # This secret is used by the Ingress controller (e.g., NGINX) to enable HTTPS for the specified domains
+      ##!!!  secretName must be unique within the same namespace
+      ##!!!  secretName must be unique within the same namespace
+      ##!!!  secretName must be unique within the same namespace
+      # Cert-Manager or another certificate management tool will create and manage the TLS secret. This secret contains:
+      # - The certificate (tls.crt).
+      # - The private key (tls.key).
+      secretName: meli-proxy.krappramiro.xyz # Nombre del secreto TLS que se creará
+
+# See https://kubernetes.io/docs/tasks/configure-pod-container/configure-liveness-readiness-startup-probes/
+livenessProbe:
+  httpGet:
+    path: /health
+    port: 80
+  # See https://kubernetes.io/docs/tasks/configure-pod-container/configure-liveness-readiness-startup-probes/#configure-probes
+  initialDelaySeconds: 3
+  periodSeconds: 1
+
+# See https://kubernetes.io/docs/tasks/configure-pod-container/configure-liveness-readiness-startup-probes/
+readinessProbe:
+  httpGet:
+    path: /health
+    port: 80
+  # See https://kubernetes.io/docs/tasks/configure-pod-container/configure-liveness-readiness-startup-probes/#configure-probes
+  initialDelaySeconds: 3
+  periodSeconds: 1
+
+# Environment variables to be passed to the container
+# See project .env.example for more info
+env:
+  # URL a nuestra instancia de REDIS
+  - name: REDIS_HOST
+    value: "redis"
+
+  # Puerto de nuestra instancia de redis
+  - name: REDIS_PORT
+    value: "6379"
+
+  # Contraseña de nuestra instancia de redis
+  - name: REDIS_PASSWORD
+    value: ""
+
+  # Path al archivo de configuración
+  - name: CONFIG_FILE_PATH
+    value: "/config/config.yaml"
+
+  # URL a la api de mercado libre
+  - name: MELI_API_URL
+    value: "https://67e2b43d97fc65f535373b1b.mockapi.io"
+
+resources:
+  requests:
+    memory: "256Mi"
+    cpu: "200m"
+    ephemeral-storage: "500Mi"
+  limits:
+    memory: "512Mi"
+    cpu: "700m"
+
+config:
+  rules:
+    - type: "ip"
+      ip: "100.100.100.100"
+      limit: 1000
+      window: 60 # 60 segundos
+
+    - type: "ip"
+      ip: "127.0.0.1"
+      limit: 15
+      window: 60 # 60 segundos
+
+    - type: "path"
+      pattern: "user/*"
+      limit: 5
+      window: 60 # 60 segundos
+
+    - type: "path"
+      pattern: "items/*" # Wildcard para rutas como /items/MLA123
+      limit: 100
+      window: 10
+
+    - type: "ip_path"
+      ip: "100.100.100.102"
+      pattern: "categories/*"
+      limit: 10
+      window: 300
