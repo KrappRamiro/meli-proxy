@@ -14,6 +14,9 @@ services:
     ports:
       - ${REDIS___EXTERNAL_PORT:-6379}:${REDIS___INTERNAL_PORT:-6379}
 
+  # ===================
+  # app
+  # -------------------
   app:
     build:
       context: ../

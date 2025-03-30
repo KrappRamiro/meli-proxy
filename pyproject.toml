@@ -110,3 +110,51 @@ lint.ignore = ["E501"]  # Ignorar error line-too-long (controlado por Black Form
 strict = true                  # Habilita todas las comprobaciones
 disallow_untyped_defs = true   # Requiere type hints en todas las funciones
 python_version = "3.12"
+
+# === Unit testing === #
+# See https://coverage.readthedocs.io/en/latest/config.html
+
+[tool.coverage.run]
+
+# See https://coverage.readthedocs.io/en/latest/source.html#source
+# and https://stackoverflow.com/questions/76442204/configure-pyproject-toml-for-unittest-and-coverage
+# and https://pytest-with-eric.com/coverage/python-coverage-omit-subfolder/
+source = [
+    # Include our source code
+    "."
+]
+include = ["api_proxy/*"]
+omit = ["*/.venv/*"]
+
+# Enable branch coverage analysis (checks both true/false branches)
+branch = true
+
+[tool.coverage.report]
+# Show line numbers of missed coverage
+show_missing = true
+
+# Don't show files with 100% coverage
+skip_covered = true
+
+# Patterns to exclude from coverage consideration
+exclude_lines = [
+    "pragma: no cover",        # Ignore lines with coverage pragma comments
+    "if __name__ == .__main__.:"  # Exclude main blocks (common practice)
+]
+
+exclude_also = [
+    # Don't complain about missing debug-only code:
+    "def __repr__",
+    "if self\\.debug",
+
+    # Don't complain if tests don't hit defensive assertion code:
+    "raise AssertionError",
+    "raise NotImplementedError",
+
+    # Don't complain if non-runnable code isn't run:
+    "if 0:",
+    "if __name__ == .__main__.:",
+
+    # Don't complain about abstract methods, they aren't run:
+    "@(abc\\.)?abstractmethod",
+]

@@ -1,16 +1,16 @@
 # API Proxy para MercadoLibre
 
-Proxy de APIs con sistema de rate limiting escalable para MercadoLibre.
+Proxy de APIs escalable con sistema de rate limiting para MercadoLibre.
 
 ## Limites técnicos:
 
 - Solamente se puede cargar un archivo de configuración (`config.yaml`) y este solamente puede tener el encoding UTF-8.
 
-## 🚀 Instalación
+## 🚀 Setup del proyecto
 
 ```bash
 # 1. Clonar repositorio
-git clone https://github.com/tuusuario/api-proxy.git
+git clone https://github.com/KrappRamiro/meli-proxy
 cd api-proxy
 
 # 2. Crear venv (Python 3.12)
@@ -20,51 +20,64 @@ source .venv/bin/activate  # Linux/Mac
 
 # 3. Instalar dependencias
 pip install -e .[dev,test]
+
+# 4. Crear archivo .env
+# ⚠️ ATENCION: Leer los comentarios del archivo para saber qué valores usar
+cp .env.example .env
 ```
 
-## 🛠 Desarrollo
+### 🧰 Setup para desarrollo
 
 ```bash
-# Ejecutar servidor local con autorecarga
-uvicorn src.api_proxy.main:app --reload --port 8081 --env-file .env
+# 1. Levantar redis de fondo
+cd docker/
+docker compose up redis -d
 
-# Formatear código automáticamente
+# 2. Ejecutar servidor local con autorecarga
+cd ../
+uvicorn src.api_proxy.main:app --reload --port 8081 --env-file .env --log-level debug
+```
+
+### 🛠 Herramientas para desarrollo
+
+```bash
+# Formatear código
 black .
 
-# Verificar linting y corregir errores automáticamente
+# Correr linter y corregir errores automáticamente
 ruff check --fix .
 
-# Verificar tipos estáticos
+# Hacer checkeo de tipos estáticos
 mypy src/
 ```
 
-## ✅ Testing
+### 🧪 Ejecución de tests
 
 ```bash
-# Ejecutar tests con cobertura
-pytest -v --cov=src --cov-report=html
+# Ejecutar tests
+coverage run -m pytest
 
-# Generar reporte de cobertura
+# Console report
+coverage report
+
+# HTML report
 coverage html
+
+# XML report (Para CI/CD)
+coverage xml
 ```
 
-## ⚙️ Variables de Entorno
-
-Crear archivo `.env` en la raíz:
-
-```env
-REDIS_URL=redis://localhost:6379
-RATE_LIMIT_ENABLED=true
-```
-
-## 🐳 Ejecución con Docker
+### 🐳 Correr con Docker
 
 ```bash
-# Construir imagen
-docker build -t api-proxy .
+# Crear archivo .env
+# ⚠️ ATENCION: Leer los comentarios del archivo para saber qué valores usar
+cp .env.example .env.docker
 
-# Ejecutar contenedor
-docker run -p 8080:80 api-proxy
+cd docker/
+
+# Levantar proyecto
+docker compose up --build
 ```
 
 ## Explicaciones del desarrollo
