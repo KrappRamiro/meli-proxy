@@ -10,11 +10,11 @@ replicaCount: 1
 # Remember to keep appVersion from Chart.yaml up to date!
 
 image:
-  repository: registry.gitlab.com/espinlabs/educacion-caba/sigee/api-sigee
+  repository: krappramiro/meli-proxy
   # This sets the pull policy for images.
   pullPolicy: IfNotPresent
   # Overrides the image tag whose default is the chart appVersion.
-  tag: ""
+  tag: "latest"
 
 # This is to override the chart name.
 nameOverride: ""

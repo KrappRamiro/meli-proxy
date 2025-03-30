@@ -18,10 +18,12 @@ Proxy de APIs escalable con sistema de rate limiting para MercadoLibre.
       - [Regla por Route (`type: path`)](#regla-por-route-type-path)
       - [Regla combinada de IP y Route (`type: ip_path`)](#regla-combinada-de-ip-y-route-type-ip_path)
     - [Ejemplo de `config.yaml`](#ejemplo-de-configyaml)
+  - [Upload de imagen a Dockerhub](#upload-de-imagen-a-dockerhub)
   - [☸️ Deploy a Kubernetes](#️-deploy-a-kubernetes)
     - [🌊 ¿Qué función cumple Helm?](#-qué-función-cumple-helm)
     - [📄 ¿Qué son los `values.yaml`?](#-qué-son-los-valuesyaml)
       - [📍 Valores por defecto vs. Overrides](#-valores-por-defecto-vs-overrides)
+    - [Como deployear](#como-deployear)
   - [Explicaciones del desarrollo](#explicaciones-del-desarrollo)
     - [Para qué crear la carpeta `src/api_proxy/`](#para-qué-crear-la-carpeta-srcapi_proxy)
     - [Por qué `src/api_proxy/` tiene un archivo `__init__.py`?](#por-qué-srcapi_proxy-tiene-un-archivo-__init__py)
@@ -220,6 +222,14 @@ rules:
     window: 3600 # por hora
 ```
 
+## Upload de imagen a Dockerhub
+
+```bash
+docker build  --file docker/Dockerfile --tag krappramiro/meli-proxy:latest .
+docker login
+docker push krappramiro/meli-proxy:latest
+```
+
 ## ☸️ Deploy a Kubernetes
 
 Para deployear nuestra app usamos 📦 **Helm**, el gestor de paquetes para K8s: Lo usamos porque simplifica la instalación y configuración de aplicaciones mediante _"charts"_.
@@ -262,6 +272,12 @@ helm/
 ```
 
 Cada archivo `AMBIENTE.yaml` está relacionado a cada ambiente.
+
+### Como deployear
+
+```bash
+helm upgrade meli-proxy helm/chart/ --namespace meli-proxy --create-namespace --install --values helm/values/prod.yaml
+```
 
 ## Explicaciones del desarrollo
 
